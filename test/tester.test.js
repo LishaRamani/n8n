@@ -35,7 +35,7 @@ const txt = (doc, sel) => doc.querySelector(sel).textContent.trim();
     check('verdict headline', txt(doc, '#verdict-title'), 'Working.');
     check('mock LP date box', txt(doc, '.lp-box span:last-child'), 'Monday 21 Sep, 2026');
     check('mock LP CTA link', doc.querySelector('.lp-cta').getAttribute('href'), 'https://us06web.zoom.us/reg/abc');
-    check('all six checks green', doc.querySelectorAll('#checks .mark.ok').length, 6);
+    check('all checks green', doc.querySelectorAll('#checks .mark.ok').length, 5);
     check('no red checks', doc.querySelectorAll('#checks .mark.bad').length, 0);
     check('fix panel hidden', doc.getElementById('fix-wrap').hidden, true);
     const rows = doc.querySelectorAll('#tokens tbody tr');
@@ -48,7 +48,7 @@ const txt = (doc, sel) => doc.querySelector(sel).textContent.trim();
     check('names the real cause', txt(doc, '#verdict-title'), 'The sheet is not readable without a Google login.');
     check('CSV check red', doc.querySelectorAll('#checks .mark.bad').length > 0, true);
     check('fix panel shown', doc.getElementById('fix-wrap').hidden, false);
-    check('fix mentions Publish to web', /Publish to web/.test(txt(doc, '#fix')), true);
+    check('fix points at the Apps Script', /Apps Script/.test(txt(doc, '#fix')), true);
   });
 
   console.log('\n--- Request blocked (CORS / offline) ---');

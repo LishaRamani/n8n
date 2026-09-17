@@ -1,88 +1,97 @@
 # Webinar date sync — Google Sheet → systeme.io landing page
 
 The webinar date and time on the systeme.io registration page are read live from the
-**Webinar Automation Sheet** tab of the Ad Creation Sheet.
-
-Change the date in the sheet → the landing page shows the new date within about a minute.
-No page editing, no republishing, no automation tool in between.
+**Webinar Automation Sheet** tab. Change the date in the sheet → the landing page shows the new
+date. No page editing, no republishing.
 
 ```
-Google Sheet ──(CSV over HTTPS)──► browser on the systeme.io page ──► swaps the text
+Google Sheet ──► Apps Script web app ──► the systeme.io page swaps the text
 ```
-
-The page talks to Google directly. There is nothing to keep running and nothing that can
-silently stop working overnight.
 
 ---
 
-## The sheet
+## Recommended: the Apps Script route
 
-Tab: **Webinar Automation Sheet**
-(`https://docs.google.com/spreadsheets/d/18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo` → gid `2019145575`)
+A small script runs inside your own Google account, reads the sheet **as you**, and hands the
+landing page just the webinar row.
 
-| Webinar Code | Date | Time | Webinar date | Zoom URL | Group Link |
-|---|---|---|---|---|---|
-| CCM 21/09/26 | 21/09/2026 | 7:30 PM - 9:30 PM | Monday, 21 September 2026 | https://us06web.zoom.us/... | https://chat.whatsapp.com/... |
+Why this one:
 
-Only the **Date** column has to be filled in — everything else is optional.
-Dates are read as **DD/MM/YYYY** (`21/09/2026` = 21 September). `2026-09-21` and
-`Monday, 21 September 2026` also work.
+- **Your spreadsheet stays private.** Ads Content, Hooks, VSL Ads, CTWA and Sales Driven are
+  never exposed. Only the webinar date, time and links leave the file.
+- **Nothing can block it.** It answers as JSONP, which the page loads with a `<script>` tag —
+  the one mechanism no browser CORS rule applies to. This is the usual reason a
+  fetch-the-CSV approach fails.
 
-**More than one row?** The page picks the first row dated today or later, so you can fill in
-a whole quarter of webinars in advance and the page rolls forward on its own. If every row is
-in the past, it shows the last row rather than going blank.
+### Setup — about five minutes, once
 
----
+1. Open the sheet → **Extensions → Apps Script**.
+2. Delete whatever is in the editor and paste all of
+   [`google-apps-script/Code.gs`](google-apps-script/Code.gs). Save.
+3. Pick `testRun` in the function dropdown and press **Run**. Approve the permission prompt
+   (it is your own script asking to read your own sheet). The execution log should print your
+   webinar row — that confirms it works before anything goes near the landing page.
+4. **Deploy → New deployment → Web app**, with:
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+5. Copy the **`/exec`** URL it gives you.
+6. Open [`systeme-io/webinar-date-sync.html`](systeme-io/webinar-date-sync.html) and paste that
+   URL between the quotes on the `APPS_SCRIPT_URL` line.
 
-## Setup — three steps, once
-
-### 1. Let the page read the sheet — already done
-
-The visitor's browser fetches the sheet, so that one tab has to be readable without a Google login.
-**This file is already shared as *Anyone with the link → Viewer***, which is exactly what the
-snippet needs. Nothing to change.
-
-Two things worth knowing about that:
-
-- It also means every other tab in the file — Ads Content, Hooks, VSL Ads, CTWA, Sales Driven —
-  is readable by anyone holding the link. That was already true before this change.
-- To narrow it, use **File → Share → Publish to web**, pick **Webinar Automation Sheet** and
-  **Comma-separated values (.csv)**, then restrict the file itself back to specific people.
-  Paste the published URL into `PUBLISHED_CSV_URL` in the snippet. The file is owned by
-  `rajat.m.sinha@gmail.com`, so that change may need their account.
-
-### 2. Paste the snippet into the page
-
-In the systeme.io editor, drag a **Raw HTML** element onto the page (anywhere — it renders nothing
-visible) and paste the entire contents of [`systeme-io/webinar-date-sync.html`](systeme-io/webinar-date-sync.html).
-
-### 3. Put placeholders in the text
-
-Edit the existing date and time elements and replace the typed-out date with a placeholder.
-Keep the element, the icon and the styling exactly as they are — only the words change:
+Then paste the whole snippet into a **Raw HTML** element on the page, and replace the typed-out
+date and time with placeholders:
 
 | Change this | To this |
 |---|---|
 | `Thursday 17 Sep, 2026` | `{{WEBINAR_DATE}}` |
 | `7:30 PM - 9:30 PM` | `{{WEBINAR_TIME}}` |
 
-Save and view the **live page** (not the editor preview — systeme.io does not run scripts inside
-the editor). The placeholders should come out as the date from the sheet.
+Keep the element, the icon and the styling as they are — only the words change.
 
-### Check it before you touch the page
+> **After editing the script later**, re-deploy: **Deploy → Manage deployments → pencil →
+> Version: New**. Editing the code alone does not change what the live URL serves.
 
-Open [`systeme-io/test-in-browser.html`](systeme-io/test-in-browser.html) in Chrome — double-click
-the file. It runs the real snippet against the real sheet and tells you in one line whether the
-connection works, what date the page will show, and what to fix if it doesn't.
+### Check it before touching the page
 
-> The sheet currently says **21 September 2026** while the page says 17 September. Once this is
-> installed the page will follow the sheet, so make sure the sheet holds the date you actually want.
+Open [`systeme-io/test-in-browser.html`](systeme-io/test-in-browser.html) in Chrome, paste your
+`/exec` URL into the box, and press **Run again**. It runs the real snippet and tells you in one
+line whether it works and what date the page will show.
 
 ---
 
-## Placeholders you can use
+## Fallback: reading the sheet as CSV
 
-Any of these can be typed into any text element on the page:
+If you skip the Apps Script, leave `APPS_SCRIPT_URL` empty and the snippet fetches the sheet
+directly as CSV. This needs the file to be readable without a Google login — it currently is
+(`Anyone with the link → Viewer`), which also means every other tab in it is readable by anyone
+holding the link.
+
+This path is subject to browser CORS rules, which is why it may fail where the Apps Script will
+not. To tighten it, use **File → Share → Publish to web** for the one tab as CSV and put that URL
+in `PUBLISHED_CSV_URL`. The file is owned by `rajat.m.sinha@gmail.com`, so that may need their
+account.
+
+---
+
+## The sheet
+
+Tab: **Webinar Automation Sheet**
+(`docs.google.com/spreadsheets/d/18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo`, gid `2019145575`)
+
+| Webinar Code | Date | Time | Webinar date | Zoom URL | Group Link |
+|---|---|---|---|---|---|
+| CCM 21/09/26 | 21/09/2026 | 7:30 PM - 9:30 PM | Monday, 21 September 2026 | https://us06web.zoom.us/... | https://chat.whatsapp.com/... |
+
+Only **Date** must be filled in. Dates are read **day-first** (`21/09/2026` = 21 September);
+`2026-09-21` and `Monday, 21 September 2026` also work, as does a real spreadsheet date.
+
+**More than one row?** The page picks the first row dated today or later, so you can fill in a
+quarter of webinars in advance and the page rolls forward on its own. If every row is in the past
+it shows the last row rather than going blank.
+
+---
+
+## Placeholders
 
 | Placeholder | Renders as |
 |---|---|
@@ -96,46 +105,49 @@ Any of these can be typed into any text element on the page:
 | `{{WEBINAR_CODE}}` | CCM 21/09/26 |
 | `{{ZOOM_URL}}` | the registration link |
 | `{{GROUP_LINK}}` | the WhatsApp group link |
-| `{{WEBINAR_DATE_ISO}}` | 2026-09-21 (for a countdown timer) |
+| `{{WEBINAR_DATE_ISO}}` | 2026-09-21 (for a countdown) |
 
 `{{ZOOM_URL}}` and `{{GROUP_LINK}}` also work as a **button's link** — set the button URL to
-`{{ZOOM_URL}}` and it will point at whatever the sheet says, so a new Zoom link never needs the
-page edited either.
+`{{ZOOM_URL}}` and a new Zoom link never needs the page edited either.
 
-**Add a column, get a placeholder.** A new column named `Speaker Name` automatically becomes
-`{{SPEAKER_NAME}}`. Nothing in the snippet needs changing.
+**Add a column, get a placeholder.** A column named `Speaker Name` becomes `{{SPEAKER_NAME}}`
+automatically. Nothing needs changing.
 
 ---
 
 ## Good to know
 
-- **How fast.** The browser caches the sheet for up to a minute, so a change shows up on the next
-  page load after that.
-- **If the sheet can't be reached** — link revoked, Google down, visitor offline — the page falls
-  back to the date baked into the snippet (`FALLBACK` near the top, currently 21 Sep 2026) after
-  three seconds. Visitors never see a broken `{{WEBINAR_DATE}}`. Keep that fallback roughly current.
-- **Nothing flashes.** Placeholder text is hidden until the real date is in place.
-- **Timezone.** Row selection uses IST (`TIMEZONE_OFFSET_HOURS = 5.5`), so "today" means today in India.
+- **How fast.** Responses are reused for up to a minute, so a change shows on the next page load
+  after that.
+- **If the sheet cannot be reached** the page falls back to the values in `FALLBACK` near the top
+  of the snippet. Keep those current — especially `ZOOM_URL`, since a button uses it.
+- **Nothing broken ever shows.** Placeholder text is hidden until it is filled, and on fallback any
+  placeholder with no value is dropped rather than left as `{{...}}`. A link whose value is
+  missing has its `href` removed rather than pointing somewhere invented.
+- **Timezone.** Row selection uses IST, in both the script and the page.
 
-### If the date doesn't change on the live page
+### If the date doesn't change
 
 1. Open the live page, press F12 → Console, look for a `[webinar-date-sync]` warning.
-2. `got HTML, not CSV` means step 1 didn't take — the sheet isn't publicly readable yet.
-3. Check the placeholder is spelled exactly `{{WEBINAR_DATE}}`, in capitals.
-4. Confirm you're on the live page and not the editor preview.
+2. `could not load the Apps Script URL` → the deployment is not set to **Anyone**, or the URL is
+   the `/dev` one instead of `/exec`.
+3. `got HTML, not CSV` → the CSV fallback is in use and the sheet is not publicly readable. Use
+   the Apps Script route.
+4. Check the placeholder is spelled exactly `{{WEBINAR_DATE}}`, in capitals.
+5. Confirm you are on the live page — systeme.io does not run scripts in the editor preview.
 
 ---
 
 ## Tests
 
-`test/` covers the CSV parsing, DD/MM date handling, upcoming-row selection, placeholder
-substitution, the three live-page scenarios (sheet reachable, unreachable, not shared), and the
-browser tester's own reporting.
-
-These run against a stubbed network. Whether Google actually serves the sheet to a browser can only
-be confirmed from a real browser — that is what `test-in-browser.html` is for.
-
 ```bash
-npm install          # jsdom, for the DOM test
+npm install
 npm test
 ```
+
+97 checks across the Apps Script (stubbed Google services, including that a crafted JSONP callback
+name is rejected), the CSV parsing and day-first dates, row selection, placeholder substitution,
+and six live-page scenarios.
+
+These stub the network. Whether Google actually serves your deployment can only be confirmed from a
+real browser — that is what `test-in-browser.html` is for.

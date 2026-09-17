@@ -33,7 +33,33 @@ function run(fetchImpl, label, assert) {
   w.fetch = fetchImpl;
   w.eval(scriptSrc);
   return new Promise((resolve) => {
-    setTimeout(() => { assert(w.document, w); resolve(); }, 3500);
+    setTimeout(() => { assert(w.document, w); resolve(); }, 4500);
+  });
+}
+
+// Drives the JSONP path: point the snippet at a URL, intercept the injected
+// <script>, and answer on the callback the way Apps Script would.
+function runJsonp(respond, assert) {
+  const src = scriptSrc.replace(
+    "var APPS_SCRIPT_URL = '';",
+    "var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/TEST/exec';");
+  if (src === scriptSrc) throw new Error('could not point the snippet at an Apps Script URL');
+
+  const dom = new JSDOM(PAGE, { runScripts: 'outside-only', pretendToBeVisual: true });
+  const w = dom.window;
+  const head = w.document.head;
+  const realAppend = head.appendChild.bind(head);
+  head.appendChild = function (node) {
+    if (node && node.tagName === 'SCRIPT' && node.src) {
+      const name = /[?&]callback=([^&]+)/.exec(node.src);
+      setTimeout(() => respond(w, name && name[1], node), 0);
+      return node;                       // never actually fetched
+    }
+    return realAppend(node);
+  };
+  w.eval(src);
+  return new Promise((resolve) => {
+    setTimeout(() => { assert(w.document, w); resolve(); }, 4500);
   });
 }
 
@@ -74,6 +100,51 @@ function run(fetchImpl, label, assert) {
     (doc) => {
       check('HTML rejected, fallback used', doc.querySelector('.date-box').textContent, 'Monday 21 Sep, 2026');
       check('no raw placeholder visible', /\{\{/.test(doc.querySelector('.date-box').textContent), false);
+    }
+  );
+
+  console.log('\n--- Scenario 4: Apps Script answers over JSONP ---');
+  await runJsonp(
+    (w, cb) => w[cb]({ ok: true, tokens: {
+      WEBINAR_DATE: 'Monday 21 Dec, 2099', WEBINAR_TIME: '7:30 PM - 9:30 PM',
+      WEBINAR_START_TIME: '7:30 PM', WEBINAR_DAY: 'Monday',
+      ZOOM_URL: 'https://zoom.example/reg', WEBINAR_DATE_ISO: '2099-12-21'
+    } }),
+    (doc) => {
+      check('date from Apps Script', doc.querySelector('.date-box').textContent, 'Monday 21 Dec, 2099');
+      check('time from Apps Script', doc.querySelector('.time-box').textContent, '7:30 PM - 9:30 PM');
+      check('button href from Apps Script', doc.getElementById('cta').getAttribute('href'), 'https://zoom.example/reg');
+      check('nothing left hidden', doc.querySelector('.date-box strong').style.visibility, '');
+    }
+  );
+
+  console.log('\n--- Scenario 5: Apps Script reports an error ---');
+  await runJsonp(
+    (w, cb) => w[cb]({ ok: false, error: 'No row has a usable Date', tokens: {} }),
+    (doc) => {
+      check('falls back on a reported error', doc.querySelector('.date-box').textContent, 'Monday 21 Sep, 2026');
+      check('no raw placeholder', /\{\{/.test(doc.body.textContent), false);
+    }
+  );
+
+  console.log('\n--- Scenario 5b: nothing unresolved ever reaches a visitor ---');
+  await runJsonp(
+    (w, cb) => w[cb]({ ok: false, error: 'No row has a usable Date', tokens: {} }),
+    (doc) => {
+      check('no braces anywhere on the page', /\{\{|\]\]/.test(doc.body.textContent), false);
+      check('unknown token dropped, sentence survives',
+        doc.querySelector('.mixed').textContent.replace(/\s+/g, ' ').trim(), 'Doors open on');
+      check('CTA keeps its fallback link', doc.getElementById('cta').getAttribute('href'),
+        'https://us06web.zoom.us/meeting/register/Cuq7YoXgT_aNPXbRwtoOxw');
+    }
+  );
+
+  console.log('\n--- Scenario 6: Apps Script URL is wrong / unreachable ---');
+  await runJsonp(
+    (w, cb, node) => { if (node.onerror) node.onerror(); },
+    (doc) => {
+      check('falls back when the script will not load', doc.querySelector('.date-box').textContent, 'Monday 21 Sep, 2026');
+      check('page not left hidden', doc.querySelector('.date-box strong').style.visibility, '');
     }
   );
 

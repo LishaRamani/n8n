@@ -1,43 +1,44 @@
-<!--
-  Webinar date sync — Google Sheet -> systeme.io landing page
-  ----------------------------------------------------------
-  Paste this whole block into a "Raw HTML" element on the systeme.io page.
-  Then type these placeholders into your normal text elements:
-
-      {{WEBINAR_DATE}}   ->  Monday 21 Sep, 2026
-      {{WEBINAR_TIME}}   ->  7:30 PM - 9:30 PM
-      {{ZOOM_URL}}       ->  registration link (usable as a button link)
-      {{GROUP_LINK}}     ->  WhatsApp group link
-      {{WEBINAR_CODE}}   ->  CCM 21/09/26
-
-  Styling is untouched — only the placeholder text is swapped.
-  Scripts do not run inside the systeme.io editor. Always test on the live page.
--->
 <script>
+/* Webinar date sync - Google Sheet -> systeme.io landing page
+ *
+ * Paste this whole block into a Raw HTML element on the page, then type
+ * these placeholders into your normal text elements:
+ *
+ *     {{WEBINAR_DATE}}   ->  Monday 21 Sep, 2026
+ *     {{WEBINAR_TIME}}   ->  7:30 PM - 9:30 PM
+ *     {{ZOOM_URL}}       ->  registration link (also works as a button link)
+ *     {{GROUP_LINK}}     ->  WhatsApp group link
+ *
+ * Styling is untouched - only the placeholder text is swapped.
+ * Scripts do not run inside the systeme.io editor. Test on the live page.
+ */
 (function () {
   'use strict';
 
   /* ------------------------------------------------------------------ *
-   * 1. CONFIG — the only part you may need to edit                      *
+   * 1. CONFIG                                                           *
    * ------------------------------------------------------------------ */
 
-  var SHEET_ID = '18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo';
-  var TAB_GID  = '2019145575'; // "Webinar Automation Sheet" tab
+  // Preferred. Paste the Apps Script /exec URL here. This keeps the
+  // spreadsheet private and is not subject to browser CORS rules.
+  var APPS_SCRIPT_URL = '';
 
-  // Optional. Only needed if the gviz URL below is blocked for your sheet.
-  // Google Sheets -> File -> Share -> Publish to web
-  //   -> pick "Webinar Automation Sheet" + "Comma-separated values (.csv)"
-  // Paste the URL it gives you between the quotes.
+  // Used only when APPS_SCRIPT_URL is empty.
   var PUBLISHED_CSV_URL = '';
+  var SHEET_ID = '18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo';
+  var TAB_GID  = '2019145575';
 
-  // Shown if the sheet cannot be reached at all, so the page is never blank.
+  // Used if the sheet cannot be reached at all, so the page is never blank.
+  // Anything you use as a button link belongs here too - keep these current.
   var FALLBACK = {
     WEBINAR_DATE: 'Monday 21 Sep, 2026',
-    WEBINAR_TIME: '7:30 PM - 9:30 PM'
+    WEBINAR_TIME: '7:30 PM - 9:30 PM',
+    ZOOM_URL: 'https://us06web.zoom.us/meeting/register/Cuq7YoXgT_aNPXbRwtoOxw',
+    GROUP_LINK: 'https://chat.whatsapp.com/LHfFzvmMxPU5CROmsmMDlP'
   };
 
-  var TIMEZONE_OFFSET_HOURS = 5.5; // IST — decides which row counts as "upcoming"
-  var GIVE_UP_AFTER_MS = 3000;
+  var TIMEZONE_OFFSET_HOURS = 5.5; // IST - decides which row counts as "upcoming"
+  var GIVE_UP_AFTER_MS = 4000;
 
   /* ------------------------------------------------------------------ *
    * 2. Placeholder handling                                             *
@@ -71,7 +72,6 @@
       textSpots.push({ node: node, template: node.nodeValue, el: node.parentElement });
     }
 
-    // Placeholders used as links / attributes, e.g. a button pointing at {{ZOOM_URL}}
     var els = document.querySelectorAll('a[href], [data-href], form[action]');
     for (var i = 0; i < els.length; i++) {
       ['href', 'data-href', 'action'].forEach(function (attr) {
@@ -82,7 +82,6 @@
       });
     }
 
-    // Hide the raw {{...}} text so visitors never see it mid-load.
     textSpots.forEach(function (spot) {
       if (spot.el && spot.el.style) {
         spot.el.setAttribute('data-wds-prev-visibility', spot.el.style.visibility || '');
@@ -91,19 +90,32 @@
     });
   }
 
-  function fill(template, tokens) {
+  function fill(template, tokens, blankUnknown) {
     return template.replace(TOKEN_RE, function (whole, a, b) {
       var key = a || b;
-      return Object.prototype.hasOwnProperty.call(tokens, key) ? tokens[key] : whole;
+      if (Object.prototype.hasOwnProperty.call(tokens, key)) return tokens[key];
+      return blankUnknown ? '' : whole;
     });
   }
 
-  function applyTokens(tokens) {
+  function hasUnknown(template, tokens) {
+    var missing = false;
+    template.replace(TOKEN_RE, function (whole, a, b) {
+      if (!Object.prototype.hasOwnProperty.call(tokens, a || b)) missing = true;
+      return whole;
+    });
+    return missing;
+  }
+
+  // isFallback: the sheet never answered, so a placeholder we cannot fill is
+  // dropped rather than shown. Braces must never reach a visitor, and a button
+  // must never point at a made-up URL.
+  function applyTokens(tokens, isFallback) {
     if (settled) return;
     settled = true;
 
     textSpots.forEach(function (spot) {
-      try { spot.node.nodeValue = fill(spot.template, tokens); } catch (e) {}
+      try { spot.node.nodeValue = fill(spot.template, tokens, isFallback); } catch (e) {}
       if (spot.el && spot.el.style) {
         spot.el.style.visibility = spot.el.getAttribute('data-wds-prev-visibility') || '';
         spot.el.removeAttribute('data-wds-prev-visibility');
@@ -112,8 +124,12 @@
 
     attrSpots.forEach(function (spot) {
       try {
-        var next = fill(spot.template, tokens);
-        spot.el.setAttribute(spot.attr, next);
+        if (hasUnknown(spot.template, tokens)) {
+          spot.el.removeAttribute(spot.attr);
+          warn(spot.attr, 'no value for ' + spot.template + ', link removed');
+          return;
+        }
+        spot.el.setAttribute(spot.attr, fill(spot.template, tokens, false));
         if (spot.attr === 'href') spot.el.setAttribute('target', spot.el.getAttribute('target') || '_blank');
       } catch (e) {}
     });
@@ -124,7 +140,7 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * 3. CSV parsing                                                      *
+   * 3. CSV parsing (only used without an Apps Script URL)               *
    * ------------------------------------------------------------------ */
 
   function parseCsv(text) {
@@ -197,7 +213,7 @@
     m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // ISO
     if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
 
-    var loose = new Date(text.replace(/(\d)(st|nd|rd|th)/gi, '$1')); // "Monday, 21 September 2026"
+    var loose = new Date(text.replace(/(\d)(st|nd|rd|th)/gi, '$1'));
     if (!isNaN(loose.getTime())) {
       return new Date(Date.UTC(loose.getFullYear(), loose.getMonth(), loose.getDate()));
     }
@@ -264,21 +280,41 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * 5. Fetch                                                            *
+   * 5. Getting the data                                                 *
    * ------------------------------------------------------------------ */
 
-  function candidateUrls() {
-    var bust = '_=' + Math.floor(Date.now() / 60000); // refresh at most once a minute
-    var urls = [];
-    if (PUBLISHED_CSV_URL) {
-      urls.push(PUBLISHED_CSV_URL + (PUBLISHED_CSV_URL.indexOf('?') === -1 ? '?' : '&') + bust);
-    }
-    urls.push('https://docs.google.com/spreadsheets/d/' + SHEET_ID +
-              '/gviz/tq?tqx=out:csv&gid=' + TAB_GID + '&' + bust);
-    return urls;
+  function bust() { return '_=' + Math.floor(Date.now() / 60000); } // refresh at most once a minute
+
+  function warn(where, message) {
+    if (window.console && console.warn) console.warn('[webinar-date-sync]', where, message);
   }
 
-  function tryUrls(urls, done) {
+  // A <script> tag is not governed by CORS, so this works wherever the page is served from.
+  function loadViaJsonp(url, done) {
+    var name = 'wdsCb' + Math.floor(Math.random() * 1e9);
+    var script = document.createElement('script');
+    var finished = false;
+
+    function finish(tokens, why) {
+      if (finished) return;
+      finished = true;
+      try { delete window[name]; } catch (e) { window[name] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (why) warn(url, why);
+      done(tokens);
+    }
+
+    window[name] = function (data) {
+      if (data && data.ok && data.tokens) finish(data.tokens, null);
+      else finish(null, (data && data.error) || 'the script returned no data');
+    };
+    script.onerror = function () { finish(null, 'could not load the Apps Script URL'); };
+
+    script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + name + '&' + bust();
+    (document.head || document.documentElement).appendChild(script);
+  }
+
+  function loadViaCsv(urls, done) {
     if (!urls.length) return done(null);
     var url = urls[0];
     fetch(url, { credentials: 'omit', cache: 'no-store' })
@@ -287,28 +323,41 @@
         return res.text();
       })
       .then(function (text) {
-        if (/^\s*</.test(text)) throw new Error('got HTML, not CSV — sheet is probably not shared publicly');
+        if (/^\s*</.test(text)) throw new Error('got HTML, not CSV - sheet is probably not shared publicly');
         var tokens = buildTokens(toObjects(parseCsv(text)));
         if (!tokens) throw new Error('no dated rows found');
         done(tokens);
       })
       .catch(function (err) {
-        if (window.console) console.warn('[webinar-date-sync]', url, err.message);
-        tryUrls(urls.slice(1), done);
+        warn(url, err.message);
+        loadViaCsv(urls.slice(1), done);
       });
+  }
+
+  function csvUrls() {
+    var urls = [];
+    if (PUBLISHED_CSV_URL) {
+      urls.push(PUBLISHED_CSV_URL + (PUBLISHED_CSV_URL.indexOf('?') === -1 ? '?' : '&') + bust());
+    }
+    urls.push('https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+              '/gviz/tq?tqx=out:csv&gid=' + TAB_GID + '&' + bust());
+    return urls;
   }
 
   function start() {
     collectSpots();
     if (!textSpots.length && !attrSpots.length) return;
 
-    setTimeout(function () { applyTokens(FALLBACK); }, GIVE_UP_AFTER_MS);
+    setTimeout(function () { applyTokens(FALLBACK, true); }, GIVE_UP_AFTER_MS);
 
-    if (typeof fetch !== 'function') return applyTokens(FALLBACK);
+    var done = function (tokens) {
+      if (tokens) applyTokens(tokens, false);
+      else applyTokens(FALLBACK, true);
+    };
 
-    tryUrls(candidateUrls(), function (tokens) {
-      applyTokens(tokens || FALLBACK);
-    });
+    if (APPS_SCRIPT_URL) return loadViaJsonp(APPS_SCRIPT_URL, done);
+    if (typeof fetch !== 'function') return done(null);
+    loadViaCsv(csvUrls(), done);
   }
 
   if (document.readyState === 'loading') {
