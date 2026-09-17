@@ -97,10 +97,12 @@
     };
     script.onerror = function () { finish(null, 'could not load ' + WEBINAR_DATE_URL); };
 
+    // Unique per page load, so an edit to the sheet shows on the next reload
+    // rather than being served from the browser's cache.
     script.src = WEBINAR_DATE_URL +
       (WEBINAR_DATE_URL.indexOf('?') === -1 ? '?' : '&') +
       'callback=' + name +
-      '&_=' + Math.floor(Date.now() / 60000);   // refresh at most once a minute
+      '&_=' + Date.now() + '-' + Math.floor(Math.random() * 1e9);
 
     (document.head || document.documentElement).appendChild(script);
   }

@@ -69,7 +69,8 @@ View the **live page**, not the editor preview. systeme.io does not run scripts 
 
 Change column D. Reload the page. Done.
 
-The answer is reused for up to a minute, so a change appears on the next load after that.
+The page asks the script fresh on every load, so an edit shows on the very next reload.
+A hard reload (Cmd-Shift-R) rules out the browser holding the old page itself.
 
 ---
 
