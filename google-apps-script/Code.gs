@@ -1,28 +1,31 @@
 /**
  * Webinar date -> systeme.io landing page
  *
- * Reads the Webinar Automation Sheet tab and serves it as JSONP, so the
- * landing page can show a live date without the spreadsheet being public.
+ * Reads the "Webinar date" cell (column D) of the Webinar Automation Sheet tab
+ * and serves it, so the landing page can show it without the sheet being public.
+ *
+ * Whatever is typed in that cell is what appears on the page, exactly as typed.
  *
  * Deploy:  Deploy > New deployment > Web app
  *            Execute as:      Me
  *            Who has access:  Anyone
- *          Copy the /exec URL into APPS_SCRIPT_URL in the landing page snippet.
+ *          Copy the /exec URL into WEBINAR_DATE_URL in the landing page snippet.
  *
- * Re-deploy after editing: Deploy > Manage deployments > pencil > Version: New
- * (editing the code alone does not change what the live URL serves).
+ * After editing this file: Deploy > Manage deployments > pencil > Version: New.
+ * Editing the code alone does not change what the live URL serves.
  */
 
-var SHEET_ID = '18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo';
-var TAB_NAME = 'Webinar Automation Sheet';
-var TIMEZONE = 'Asia/Kolkata';
+var SHEET_ID    = '18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo';
+var TAB_NAME    = 'Webinar Automation Sheet';
+var COLUMN_NAME = 'Webinar date';  // column D
+var COLUMN_FALLBACK_INDEX = 3;     // 0-based: D, used if the header is renamed
 
 function doGet(e) {
   var payload;
   try {
-    payload = buildPayload_();
+    payload = { ok: true, date: readWebinarDate_(), updatedAt: new Date().toISOString() };
   } catch (err) {
-    payload = { ok: false, error: String((err && err.message) || err), tokens: {} };
+    payload = { ok: false, error: String((err && err.message) || err) };
   }
 
   var json = JSON.stringify(payload);
@@ -40,123 +43,26 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function buildPayload_() {
+function readWebinarDate_() {
   var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME);
   if (!sheet) throw new Error('Tab "' + TAB_NAME + '" not found');
 
-  var range = sheet.getDataRange();
-  var values = range.getValues();
-  var display = range.getDisplayValues();
-  if (values.length < 2) throw new Error('No data rows in "' + TAB_NAME + '"');
+  // Display values, so the cell reads exactly as it looks in the sheet.
+  var rows = sheet.getDataRange().getDisplayValues();
+  if (rows.length < 2) throw new Error('No rows below the header in "' + TAB_NAME + '"');
 
-  var headers = display[0].map(function (h) { return String(h).trim(); });
+  var headers = rows[0].map(function (h) { return String(h).trim().toLowerCase(); });
+  var col = headers.indexOf(COLUMN_NAME.toLowerCase());
+  if (col === -1) col = COLUMN_FALLBACK_INDEX;
 
-  var rows = [];
-  for (var r = 1; r < values.length; r++) {
-    var row = { _raw: {}, _text: {} };
-    var any = false;
-    for (var c = 0; c < headers.length; c++) {
-      if (!headers[c]) continue;
-      row._raw[headers[c]] = values[r][c];
-      row._text[headers[c]] = String(display[r][c]).trim();
-      if (row._text[headers[c]]) any = true;
-    }
-    if (any) rows.push(row);
+  for (var r = 1; r < rows.length; r++) {
+    var value = String(rows[r][col] === undefined ? '' : rows[r][col]).trim();
+    if (value) return value;
   }
-
-  var dated = rows.filter(function (row) { return dateOf_(row) !== null; });
-  if (!dated.length) throw new Error('No row has a usable Date');
-
-  var today = new Date();
-  today = new Date(Utilities.formatDate(today, TIMEZONE, 'yyyy/MM/dd'));
-
-  var chosen = null;
-  for (var i = 0; i < dated.length; i++) {
-    if (dateOf_(dated[i]).getTime() >= today.getTime()) { chosen = dated[i]; break; }
-  }
-  var matchedUpcoming = chosen !== null;
-  if (!chosen) chosen = dated[dated.length - 1];
-
-  return {
-    ok: true,
-    updatedAt: new Date().toISOString(),
-    source: TAB_NAME,
-    matchedUpcoming: matchedUpcoming,
-    tokens: tokensFor_(chosen)
-  };
+  throw new Error('Column "' + COLUMN_NAME + '" has no value');
 }
 
-function dateOf_(row) {
-  var names = ['Date', 'Webinar date', 'Webinar Date'];
-  for (var i = 0; i < names.length; i++) {
-    for (var key in row._raw) {
-      if (key.toLowerCase() !== names[i].toLowerCase()) continue;
-
-      var raw = row._raw[key];
-      if (Object.prototype.toString.call(raw) === '[object Date]' && !isNaN(raw.getTime())) {
-        return new Date(raw.getFullYear(), raw.getMonth(), raw.getDate());
-      }
-
-      var parsed = parseText_(row._text[key]);
-      if (parsed) return parsed;
-    }
-  }
-  return null;
-}
-
-function parseText_(text) {
-  if (!text) return null;
-  text = String(text).trim();
-  if (!text) return null;
-
-  var m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); // DD/MM/YYYY
-  if (m) {
-    var year = Number(m[3]);
-    if (year < 100) year += 2000;
-    return new Date(year, Number(m[2]) - 1, Number(m[1]));
-  }
-
-  m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // ISO
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-
-  var loose = new Date(text.replace(/(\d)(st|nd|rd|th)/gi, '$1')); // "Monday, 21 September 2026"
-  if (!isNaN(loose.getTime())) {
-    return new Date(loose.getFullYear(), loose.getMonth(), loose.getDate());
-  }
-  return null;
-}
-
-function tokensFor_(row) {
-  var tokens = {};
-
-  // Every column becomes a placeholder: "Speaker Name" -> {{SPEAKER_NAME}}
-  for (var key in row._text) {
-    var name = String(key).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    if (name) tokens[name] = row._text[key];
-  }
-
-  var when = dateOf_(row);
-  if (when) {
-    tokens.WEBINAR_DAY        = Utilities.formatDate(when, TIMEZONE, 'EEEE');
-    tokens.WEBINAR_DATE       = Utilities.formatDate(when, TIMEZONE, 'EEEE d MMM, yyyy');
-    tokens.WEBINAR_DATE_SHORT = Utilities.formatDate(when, TIMEZONE, 'd MMM');
-    tokens.WEBINAR_DATE_ISO   = Utilities.formatDate(when, TIMEZONE, 'yyyy-MM-dd');
-    if (!tokens.WEBINAR_DATE_LONG) {
-      tokens.WEBINAR_DATE_LONG = Utilities.formatDate(when, TIMEZONE, 'EEEE, d MMMM yyyy');
-    }
-  }
-
-  var time = tokens.TIME || tokens.WEBINAR_TIME || '';
-  tokens.WEBINAR_TIME = time;
-  if (time) {
-    var parts = time.split(/\s*[-–—]\s*|\s+to\s+/i);
-    tokens.WEBINAR_START_TIME = (parts[0] || '').trim();
-    tokens.WEBINAR_END_TIME = (parts[1] || '').trim();
-  }
-  return tokens;
-}
-
-/** Run this once from the editor to check the output before deploying. */
+/** Run this once from the editor to see what the page will show. */
 function testRun() {
-  Logger.log(JSON.stringify(buildPayload_(), null, 2));
+  Logger.log(readWebinarDate_());
 }

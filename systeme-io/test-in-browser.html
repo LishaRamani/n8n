@@ -9,156 +9,98 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
   :root {
-    --ground: #eef1f3;
-    --surface: #ffffff;
-    --ink: #10181d;
-    --ink-soft: #55656f;
-    --line: #d5dce0;
-    --accent: #0f6068;
-    --ok: #176b45;
-    --ok-bg: #e4f2ea;
-    --bad: #9d2f24;
-    --bad-bg: #fbe9e6;
-    --warn: #8a5a00;
-    --warn-bg: #fbf0da;
-    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --ground:#eef1f3; --surface:#fff; --ink:#10181d; --ink-soft:#55656f; --line:#d5dce0;
+    --accent:#0f6068; --ok:#176b45; --ok-bg:#e4f2ea; --bad:#9d2f24; --bad-bg:#fbe9e6;
+    --warn:#8a5a00; --warn-bg:#fbf0da;
+    --sans:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ground: #11171b; --surface: #192127; --ink: #e8eef1; --ink-soft: #94a5af;
-      --line: #2c383f; --accent: #4fb3bd;
-      --ok: #6ddba0; --ok-bg: #17301f; --bad: #f2a099; --bad-bg: #331a17;
-      --warn: #e9be6a; --warn-bg: #2f2513;
+      --ground:#11171b; --surface:#192127; --ink:#e8eef1; --ink-soft:#94a5af; --line:#2c383f;
+      --accent:#4fb3bd; --ok:#6ddba0; --ok-bg:#17301f; --bad:#f2a099; --bad-bg:#331a17;
+      --warn:#e9be6a; --warn-bg:#2f2513;
     }
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--ground); color: var(--ink);
-    font-family: var(--sans); font-size: 15px; line-height: 1.55;
-    padding: 0 16px 64px;
-  }
-  .wrap { max-width: 760px; margin: 0 auto; }
-  header { padding-block: 40px 24px; }
-  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
-  .sub { color: var(--ink-soft); font-size: 14px; margin: 0; }
-  h2 {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
-    color: var(--ink-soft); margin: 32px 0 10px;
-  }
-  .verdict {
-    border-radius: 10px; padding: 18px 20px; display: flex; gap: 14px; align-items: flex-start;
-    border: 1px solid var(--line); background: var(--surface);
-  }
-  .verdict.pass { background: var(--ok-bg); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
-  .verdict.fail { background: var(--bad-bg); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
-  .verdict-mark { font-size: 20px; line-height: 1.3; }
-  .verdict-title { font-weight: 600; margin: 0 0 3px; }
-  .verdict.pass .verdict-title { color: var(--ok); }
-  .verdict.fail .verdict-title { color: var(--bad); }
-  .verdict-body { margin: 0; font-size: 14px; color: var(--ink-soft); }
-  .verdict-body code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
-
-  /* Mock of the live landing page section */
-  .lp {
-    background: #0b0b0b; border-radius: 10px; padding: 22px 18px;
-    display: flex; flex-wrap: wrap; gap: 12px; border: 1px solid var(--line);
-  }
-  .lp-box {
-    background: #fff; color: #111; border-radius: 7px; padding: 14px 18px;
-    font-weight: 600; font-size: 17px; flex: 1 1 210px; display: flex; gap: 10px; align-items: center;
-  }
-  .lp-icon { color: #3aa0d8; font-size: 15px; }
-  .lp-cta {
-    flex: 1 1 100%; background: #f5ff3d; color: #111; border-radius: 7px;
-    padding: 14px 18px; font-weight: 700; text-align: center; text-decoration: none;
-    display: block; font-size: 16px;
-  }
-  .caption { color: var(--ink-soft); font-size: 13px; margin: 8px 0 0; }
-
-  ul.checks { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
-  ul.checks li { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: baseline; }
-  ul.checks li:last-child { border-bottom: 0; }
-  .mark { font-family: var(--mono); font-size: 13px; flex: 0 0 auto; width: 16px; }
-  .mark.ok { color: var(--ok); } .mark.bad { color: var(--bad); } .mark.wait { color: var(--ink-soft); }
-  .check-label { flex: 1 1 auto; }
-  .check-detail { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); text-align: right; word-break: break-word; }
-
-  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  th, td { text-align: left; padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
-  th { font-weight: 600; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-soft); }
-  tr:last-child td { border-bottom: 0; }
-  td.token { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
-  td.value { font-family: var(--mono); word-break: break-word; }
-  .scroll { overflow-x: auto; }
-
-  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
-  button {
-    font: inherit; font-weight: 500; padding: 9px 16px; border-radius: 7px;
-    border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
-  }
-  button:hover { filter: brightness(1.08); }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  input[type=url] {
-    font: inherit; font-family: var(--mono); font-size: 13px; padding: 9px 12px;
-    border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink);
-    flex: 1 1 260px; min-width: 0;
-  }
-  pre {
-    font-family: var(--mono); font-size: 12.5px; background: var(--surface);
-    border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
-    overflow-x: auto; margin: 0; color: var(--ink-soft); white-space: pre-wrap; word-break: break-word;
-  }
-  .fix { border-left: 3px solid var(--warn); background: var(--warn-bg); padding: 14px 16px; border-radius: 0 8px 8px 0; font-size: 14px; }
-  .fix p { margin: 0 0 8px; } .fix p:last-child { margin: 0; }
-  .fix code { font-family: var(--mono); font-size: 13px; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans);
+         font-size:15px; line-height:1.55; padding:0 16px 64px; }
+  .wrap { max-width:680px; margin:0 auto; }
+  header { padding-block:40px 24px; }
+  h1 { font-size:22px; font-weight:600; margin:0 0 6px; letter-spacing:-0.01em; }
+  .sub { color:var(--ink-soft); font-size:14px; margin:0; }
+  h2 { font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+       color:var(--ink-soft); margin:32px 0 10px; }
+  .verdict { border-radius:10px; padding:18px 20px; display:flex; gap:14px; align-items:flex-start;
+             border:1px solid var(--line); background:var(--surface); }
+  .verdict.pass { background:var(--ok-bg); border-color:color-mix(in srgb,var(--ok) 35%,transparent); }
+  .verdict.fail { background:var(--bad-bg); border-color:color-mix(in srgb,var(--bad) 35%,transparent); }
+  .verdict-mark { font-size:20px; line-height:1.3; }
+  .verdict-title { font-weight:600; margin:0 0 3px; }
+  .verdict.pass .verdict-title { color:var(--ok); }
+  .verdict.fail .verdict-title { color:var(--bad); }
+  .verdict-body { margin:0; font-size:14px; color:var(--ink-soft); }
+  .verdict-body code { font-family:var(--mono); font-size:13px; color:var(--ink); }
+  .lp { background:#0b0b0b; border-radius:10px; padding:22px 18px; border:1px solid var(--line); }
+  .lp-box { background:#fff; color:#111; border-radius:7px; padding:14px 18px; font-weight:600;
+            font-size:17px; display:flex; gap:10px; align-items:center; }
+  .lp-icon { color:#3aa0d8; font-size:15px; }
+  .caption { color:var(--ink-soft); font-size:13px; margin:8px 0 0; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+  button { font:inherit; font-weight:500; padding:9px 16px; border-radius:7px;
+           border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button:hover { filter:brightness(1.08); }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  input[type=url] { font:inherit; font-family:var(--mono); font-size:13px; padding:9px 12px;
+                    border:1px solid var(--line); border-radius:7px; background:var(--surface);
+                    color:var(--ink); flex:1 1 300px; min-width:0; }
+  .fix { border-left:3px solid var(--warn); background:var(--warn-bg); padding:14px 16px;
+         border-radius:0 8px 8px 0; font-size:14px; }
+  .fix p { margin:0 0 8px; } .fix p:last-child { margin:0; }
+  .fix code { font-family:var(--mono); font-size:13px; }
+  pre { font-family:var(--mono); font-size:12.5px; background:var(--surface); border:1px solid var(--line);
+        border-radius:10px; padding:14px 16px; overflow-x:auto; margin:0; color:var(--ink-soft);
+        white-space:pre-wrap; word-break:break-word; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>Webinar Date Sync — Test</h1>
-    <p class="sub">Runs the real landing-page snippet against the Webinar Automation Sheet, in your browser. Paste your Apps Script URL below and press Run again.</p>
+    <p class="sub">Paste your Apps Script <code>/exec</code> URL below and press Run. This runs the
+      real landing-page snippet against your real sheet.</p>
   </header>
 
-  <div id="verdict" class="verdict">
+  <div class="actions">
+    <input type="url" id="endpoint" placeholder="https://script.google.com/macros/s/&#8230;/exec">
+    <button id="run" type="button">Run</button>
+  </div>
+
+  <div id="verdict" class="verdict" style="margin-top:20px">
     <div class="verdict-mark" id="verdict-mark">&#8230;</div>
     <div>
-      <p class="verdict-title" id="verdict-title">Testing&#8230;</p>
-      <p class="verdict-body" id="verdict-body">Fetching the sheet.</p>
+      <p class="verdict-title" id="verdict-title">Waiting for a URL</p>
+      <p class="verdict-body" id="verdict-body">Paste the <code>/exec</code> URL from
+        Deploy &rarr; New deployment and press Run.</p>
     </div>
   </div>
 
   <h2>What the landing page will show</h2>
   <div class="lp">
     <div class="lp-box"><span class="lp-icon">&#9635;</span><span>{{WEBINAR_DATE}}</span></div>
-    <div class="lp-box"><span class="lp-icon">&#9203;</span><span>{{WEBINAR_TIME}}</span></div>
-    <a class="lp-cta" href="{{ZOOM_URL}}">&#8594; REGISTER FREE NOW</a>
   </div>
-  <p class="caption">A stand-in for your systeme.io section. The snippet below fills these in exactly as it will on the live page.</p>
-
-  <h2>Checks</h2>
-  <ul class="checks" id="checks"></ul>
-
-  <div class="actions">
-    <button id="rerun" type="button">Run again</button>
-    <input type="url" id="endpoint" placeholder="Paste your Apps Script /exec URL here, then Run again">
-  </div>
+  <p class="caption">A stand-in for your systeme.io date block.</p>
 
   <div id="fix-wrap" hidden>
     <h2>How to fix it</h2>
     <div class="fix" id="fix"></div>
   </div>
 
-  <h2>Placeholder values</h2>
-  <div class="scroll"><table id="tokens"><tbody><tr><td class="value">Waiting for the sheet&#8230;</td></tr></tbody></table></div>
-
-  <h2>Raw response from Google</h2>
-  <pre id="raw">Waiting&#8230;</pre>
+  <h2>Console output</h2>
+  <pre id="raw">Nothing yet.</pre>
 </div>
 
 <script>
-/* ---- diagnostics: watch what the real snippet does ---- */
 (function () {
   var warnings = [];
   var origWarn = console.warn;
@@ -170,48 +112,6 @@
     return origWarn.apply(console, arguments);
   };
 
-  var CHECKS = [
-    ['reach',  'Endpoint responded'],
-    ['data',   'Sent back webinar data, not an error page'],
-    ['rows',   'Row read from the Webinar Automation Sheet'],
-    ['date',   'Date understood as day-first (DD/MM)'],
-    ['render', 'Placeholders replaced on the page']
-  ];
-
-  function renderChecks(state) {
-    var ul = document.getElementById('checks');
-    ul.innerHTML = '';
-    CHECKS.forEach(function (c) {
-      var s = state[c[0]] || {};
-      var li = document.createElement('li');
-      var cls = s.ok === true ? 'ok' : s.ok === false ? 'bad' : 'wait';
-      var glyph = s.ok === true ? '\u2713' : s.ok === false ? '\u2715' : '\u00b7';
-      li.innerHTML = '<span class="mark ' + cls + '">' + glyph + '</span>' +
-        '<span class="check-label"></span><span class="check-detail"></span>';
-      li.querySelector('.check-label').textContent = c[1];
-      li.querySelector('.check-detail').textContent = s.detail || '';
-      ul.appendChild(li);
-    });
-  }
-  renderChecks({});
-
-  function showTokens(tokens) {
-    var tb = document.getElementById('tokens').querySelector('tbody');
-    tb.innerHTML = '';
-    var keys = Object.keys(tokens).sort();
-    if (!keys.length) { tb.innerHTML = '<tr><td class="value">None</td></tr>'; return; }
-    var head = document.createElement('tr');
-    head.innerHTML = '<th>Placeholder</th><th>Becomes</th>';
-    tb.appendChild(head);
-    keys.forEach(function (k) {
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td class="token"></td><td class="value"></td>';
-      tr.children[0].textContent = '{{' + k + '}}';
-      tr.children[1].textContent = tokens[k];
-      tb.appendChild(tr);
-    });
-  }
-
   function verdict(kind, title, body) {
     var el = document.getElementById('verdict');
     el.className = 'verdict ' + kind;
@@ -221,123 +121,84 @@
     document.getElementById('verdict-body').innerHTML = body;
   }
 
-  function showFix(html) {
-    document.getElementById('fix-wrap').hidden = false;
-    document.getElementById('fix').innerHTML = html;
-  }
-
-  // The snippet announces its result on this event.
   document.addEventListener('webinar-date-sync', function (e) {
-    var tokens = e.detail || {};
-    // Only a real sheet parse sets WEBINAR_DATE_ISO; the baked-in fallback does not.
-    var live = Object.prototype.hasOwnProperty.call(tokens, 'WEBINAR_DATE_ISO');
-    var blockedByCors = warnings.some(function (w) { return /Failed to fetch|NetworkError|CORS/i.test(w); });
-    var gotHtml = warnings.some(function (w) { return /got HTML, not CSV/i.test(w); });
+    var date = (e.detail && e.detail.date) || '';
+    var failed = warnings.length > 0;
 
-    showTokens(tokens);
+    document.getElementById('raw').textContent = warnings.length ? warnings.join('\n') : 'No errors.';
 
-    renderChecks({
-      reach:  { ok: !blockedByCors, detail: blockedByCors ? 'request blocked' : 'responded' },
-      data:   { ok: !blockedByCors && !gotHtml, detail: gotHtml ? 'got a sign-in page' : (blockedByCors ? '\u2014' : 'ok') },
-      rows:   { ok: live, detail: live ? 'row read' : '\u2014' },
-      date:   { ok: live, detail: live ? tokens.WEBINAR_DATE_ISO : '\u2014' },
-      render: { ok: true, detail: 'done' }
-    });
-
-    if (live) {
+    if (!failed) {
       verdict('pass', 'Working.',
-        'Your landing page will show <code>' + tokens.WEBINAR_DATE +
-        '</code> and <code>' + tokens.WEBINAR_TIME + '</code>. Change the sheet, reload, and this updates.');
-    } else if (gotHtml) {
-      verdict('fail', 'The sheet is not readable without a Google login.',
-        'Google returned a sign-in page instead of data, so the snippet fell back to its built-in date.');
-      showFix('<p>Use the Apps Script instead \u2014 it does not depend on the sheet being public. ' +
-        'Follow the setup steps in the README, then paste the <code>/exec</code> URL into the box above ' +
-        'and press <strong>Run again</strong>.</p>');
-    } else if (blockedByCors) {
-      verdict('fail', 'The browser blocked the request.',
-        'The sheet may still be fine \u2014 opening this file straight from your disk is stricter than a real website.');
-      showFix('<p>This is exactly what the Apps Script fixes: it is loaded as a script, which no browser ' +
-        'CORS rule applies to. Set it up per the README and paste the <code>/exec</code> URL above.</p>');
-    } else {
-      verdict('fail', 'Reached the sheet, but found no usable row.',
-        'The snippet fell back to its built-in date.');
-      showFix('<p>Check the <strong>Webinar Automation Sheet</strong> tab has a header row and at least one row ' +
-        'with a <code>Date</code> filled in, written as <code>DD/MM/YYYY</code>.</p>');
+        'Your landing page will show <code>' + date +
+        '</code>. Change column D in the sheet, reload, and this follows.');
+      return;
     }
 
-    var raw = document.getElementById('raw');
-    raw.textContent = warnings.length ? warnings.join('\n') : 'No errors reported.';
+    var joined = warnings.join(' ');
+    if (/could not load/i.test(joined)) {
+      verdict('fail', 'That URL could not be loaded.', 'The page fell back to its built-in date.');
+      document.getElementById('fix-wrap').hidden = false;
+      document.getElementById('fix').innerHTML =
+        '<p>Check the deployment is <strong>Web app</strong> with <strong>Who has access: Anyone</strong>, ' +
+        'and that you copied the <code>/exec</code> URL \u2014 not the <code>/dev</code> one.</p>' +
+        '<p>After editing the script you must re-deploy: <strong>Deploy &rarr; Manage deployments ' +
+        '&rarr; pencil &rarr; Version: New</strong>.</p>';
+    } else {
+      verdict('fail', 'The script answered, but sent no date.', 'The page fell back to its built-in date.');
+      document.getElementById('fix-wrap').hidden = false;
+      document.getElementById('fix').innerHTML =
+        '<p>Check column D (<strong>Webinar date</strong>) of the ' +
+        '<strong>Webinar Automation Sheet</strong> tab has a value in it.</p>' +
+        '<p>The exact reason is in Console output above.</p>';
+    }
   });
 
-  document.getElementById('rerun').addEventListener('click', function () {
+  document.getElementById('run').addEventListener('click', function () {
     var url = document.getElementById('endpoint').value.trim();
     location.replace(location.pathname + (url ? '?url=' + encodeURIComponent(url) : ''));
+  });
+  document.getElementById('endpoint').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('run').click();
   });
 
   var m = location.search.match(/[?&]url=([^&]+)/);
   if (m) {
-    var given = decodeURIComponent(m[1]);
-    document.getElementById('endpoint').value = given;
-    if (/script\.google\.com/.test(given)) window.__WDS_APPS_SCRIPT = given;
-    else window.__WDS_PUBLISHED = given;
+    window.__WDS_URL = decodeURIComponent(m[1]);
+    document.getElementById('endpoint').value = window.__WDS_URL;
+    verdict('', 'Testing\u2026', 'Asking your Apps Script for the date.');
   }
 })();
 </script>
 
 <!-- ===== Below is the snippet that goes on the systeme.io page, copied verbatim
-         except the two lines marked "TESTER ONLY", which let the boxes above
+         except the one line marked "TESTER ONLY", which lets the box above
          drive it without editing the file. ===== -->
 <script>
-/* Webinar date sync - Google Sheet -> systeme.io landing page
+/* Webinar date -> systeme.io
  *
  * Paste this whole block into a Raw HTML element on the page, then type
- * these placeholders into your normal text elements:
  *
- *     {{WEBINAR_DATE}}   ->  Monday 21 Sep, 2026
- *     {{WEBINAR_TIME}}   ->  7:30 PM - 9:30 PM
- *     {{ZOOM_URL}}       ->  registration link (also works as a button link)
- *     {{GROUP_LINK}}     ->  WhatsApp group link
+ *     {{WEBINAR_DATE}}
  *
- * Styling is untouched - only the placeholder text is swapped.
- * Scripts do not run inside the systeme.io editor. Test on the live page.
+ * wherever the date should appear. Styling is untouched - only that text
+ * is swapped for whatever column D of the sheet says.
+ *
+ * Scripts do not run in the systeme.io editor. Check the live page.
  */
 (function () {
   'use strict';
 
-  /* ------------------------------------------------------------------ *
-   * 1. CONFIG                                                           *
-   * ------------------------------------------------------------------ */
+  // The Apps Script /exec URL. Paste it between the quotes.
+  var WEBINAR_DATE_URL = window.__WDS_URL || ''; /* TESTER ONLY: the shipped file has '' here */
 
-  // Preferred. Paste the Apps Script /exec URL here. This keeps the
-  // spreadsheet private and is not subject to browser CORS rules.
-  var APPS_SCRIPT_URL = window.__WDS_APPS_SCRIPT || ''; /* TESTER ONLY: the shipped file has '' here */
+  // Shown only if the script cannot be reached, so the page is never blank.
+  var FALLBACK_DATE = 'Monday, 21 September 2026';
 
-  // Used only when APPS_SCRIPT_URL is empty.
-  var PUBLISHED_CSV_URL = window.__WDS_PUBLISHED || ''; /* TESTER ONLY: the shipped file has '' here */
-  var SHEET_ID = '18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo';
-  var TAB_GID  = '2019145575';
-
-  // Used if the sheet cannot be reached at all, so the page is never blank.
-  // Anything you use as a button link belongs here too - keep these current.
-  var FALLBACK = {
-    WEBINAR_DATE: 'Monday 21 Sep, 2026',
-    WEBINAR_TIME: '7:30 PM - 9:30 PM',
-    ZOOM_URL: 'https://us06web.zoom.us/meeting/register/Cuq7YoXgT_aNPXbRwtoOxw',
-    GROUP_LINK: 'https://chat.whatsapp.com/LHfFzvmMxPU5CROmsmMDlP'
-  };
-
-  var TIMEZONE_OFFSET_HOURS = 5.5; // IST - decides which row counts as "upcoming"
   var GIVE_UP_AFTER_MS = 4000;
 
-  /* ------------------------------------------------------------------ *
-   * 2. Placeholder handling                                             *
-   * ------------------------------------------------------------------ */
-
-  var TOKEN_RE = /\{\{\s*([A-Z0-9_]+)\s*\}\}|\[\[\s*([A-Z0-9_]+)\s*\]\]/g;
+  var TOKEN_RE = /\{\{\s*WEBINAR_DATE\s*\}\}/g;
   var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
-  var textSpots = [];
-  var attrSpots = [];
+  var spots = [];
   var settled = false;
 
   function collectSpots() {
@@ -345,9 +206,7 @@
       document.body, NodeFilter.SHOW_TEXT,
       {
         acceptNode: function (n) {
-          if (!n.nodeValue || n.nodeValue.indexOf('{{') === -1 && n.nodeValue.indexOf('[[') === -1) {
-            return NodeFilter.FILTER_REJECT;
-          }
+          if (!n.nodeValue || n.nodeValue.indexOf('{{') === -1) return NodeFilter.FILTER_REJECT;
           if (n.parentNode && SKIP_TAGS[n.parentNode.nodeName]) return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_ACCEPT;
         }
@@ -359,20 +218,11 @@
     while ((node = walker.nextNode())) {
       TOKEN_RE.lastIndex = 0;
       if (!TOKEN_RE.test(node.nodeValue)) continue;
-      textSpots.push({ node: node, template: node.nodeValue, el: node.parentElement });
+      spots.push({ node: node, template: node.nodeValue, el: node.parentElement });
     }
 
-    var els = document.querySelectorAll('a[href], [data-href], form[action]');
-    for (var i = 0; i < els.length; i++) {
-      ['href', 'data-href', 'action'].forEach(function (attr) {
-        var v = els[i].getAttribute && els[i].getAttribute(attr);
-        if (!v) return;
-        TOKEN_RE.lastIndex = 0;
-        if (TOKEN_RE.test(v)) attrSpots.push({ el: els[i], attr: attr, template: v });
-      });
-    }
-
-    textSpots.forEach(function (spot) {
+    // Hide the raw {{WEBINAR_DATE}} so visitors never see it mid-load.
+    spots.forEach(function (spot) {
       if (spot.el && spot.el.style) {
         spot.el.setAttribute('data-wds-prev-visibility', spot.el.style.visibility || '');
         spot.el.style.visibility = 'hidden';
@@ -380,274 +230,67 @@
     });
   }
 
-  function fill(template, tokens, blankUnknown) {
-    return template.replace(TOKEN_RE, function (whole, a, b) {
-      var key = a || b;
-      if (Object.prototype.hasOwnProperty.call(tokens, key)) return tokens[key];
-      return blankUnknown ? '' : whole;
-    });
-  }
-
-  function hasUnknown(template, tokens) {
-    var missing = false;
-    template.replace(TOKEN_RE, function (whole, a, b) {
-      if (!Object.prototype.hasOwnProperty.call(tokens, a || b)) missing = true;
-      return whole;
-    });
-    return missing;
-  }
-
-  // isFallback: the sheet never answered, so a placeholder we cannot fill is
-  // dropped rather than shown. Braces must never reach a visitor, and a button
-  // must never point at a made-up URL.
-  function applyTokens(tokens, isFallback) {
+  function show(date) {
     if (settled) return;
     settled = true;
 
-    textSpots.forEach(function (spot) {
-      try { spot.node.nodeValue = fill(spot.template, tokens, isFallback); } catch (e) {}
+    spots.forEach(function (spot) {
+      try { spot.node.nodeValue = spot.template.replace(TOKEN_RE, date); } catch (e) {}
       if (spot.el && spot.el.style) {
         spot.el.style.visibility = spot.el.getAttribute('data-wds-prev-visibility') || '';
         spot.el.removeAttribute('data-wds-prev-visibility');
       }
     });
 
-    attrSpots.forEach(function (spot) {
-      try {
-        if (hasUnknown(spot.template, tokens)) {
-          spot.el.removeAttribute(spot.attr);
-          warn(spot.attr, 'no value for ' + spot.template + ', link removed');
-          return;
-        }
-        spot.el.setAttribute(spot.attr, fill(spot.template, tokens, false));
-        if (spot.attr === 'href') spot.el.setAttribute('target', spot.el.getAttribute('target') || '_blank');
-      } catch (e) {}
-    });
-
     try {
-      document.dispatchEvent(new CustomEvent('webinar-date-sync', { detail: tokens }));
+      document.dispatchEvent(new CustomEvent('webinar-date-sync', { detail: { date: date } }));
     } catch (e) {}
   }
 
-  /* ------------------------------------------------------------------ *
-   * 3. CSV parsing (only used without an Apps Script URL)               *
-   * ------------------------------------------------------------------ */
-
-  function parseCsv(text) {
-    var rows = [], row = [], field = '', inQuotes = false, i = 0;
-    text = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    for (; i < text.length; i++) {
-      var c = text[i];
-      if (inQuotes) {
-        if (c === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; }
-          else inQuotes = false;
-        } else field += c;
-      } else if (c === '"') inQuotes = true;
-      else if (c === ',') { row.push(field); field = ''; }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else field += c;
-    }
-    row.push(field);
-    rows.push(row);
-
-    return rows.filter(function (r) {
-      return r.some(function (cell) { return String(cell).trim() !== ''; });
-    });
+  function warn(message) {
+    if (window.console && console.warn) console.warn('[webinar-date-sync]', message);
   }
 
-  function toObjects(rows) {
-    if (!rows.length) return [];
-    var headers = rows[0].map(function (h) { return String(h).trim(); });
-    return rows.slice(1).map(function (r) {
-      var o = {};
-      headers.forEach(function (h, idx) { if (h) o[h] = (r[idx] || '').trim(); });
-      return o;
-    });
-  }
-
-  /* ------------------------------------------------------------------ *
-   * 4. Dates                                                            *
-   * ------------------------------------------------------------------ */
-
-  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var MONTHS_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-  function cell(row, names) {
-    for (var n = 0; n < names.length; n++) {
-      for (var key in row) {
-        if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
-        if (key.trim().toLowerCase() === names[n].toLowerCase()) {
-          var v = row[key];
-          if (v !== null && v !== undefined && String(v).trim() !== '') return String(v).trim();
-        }
-      }
-    }
-    return '';
-  }
-
-  function parseDate(raw) {
-    if (!raw) return null;
-    var text = String(raw).trim();
-    if (!text) return null;
-
-    var m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); // DD/MM/YYYY
-    if (m) {
-      var y = Number(m[3]);
-      if (y < 100) y += 2000;
-      return new Date(Date.UTC(y, Number(m[2]) - 1, Number(m[1])));
-    }
-
-    m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // ISO
-    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-
-    var loose = new Date(text.replace(/(\d)(st|nd|rd|th)/gi, '$1'));
-    if (!isNaN(loose.getTime())) {
-      return new Date(Date.UTC(loose.getFullYear(), loose.getMonth(), loose.getDate()));
-    }
-    return null;
-  }
-
-  function startOfLocalToday() {
-    var shifted = new Date(Date.now() + TIMEZONE_OFFSET_HOURS * 3600000);
-    return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
-  }
-
-  function tokenKey(header) {
-    return String(header).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  }
-
-  function buildTokens(rows) {
-    var dated = rows.filter(function (r) {
-      return cell(r, ['Date', 'Webinar date', 'Webinar Date']) !== '';
-    });
-    if (!dated.length) return null;
-
-    var today = startOfLocalToday(), chosen = null;
-    for (var i = 0; i < dated.length; i++) {
-      var d = parseDate(cell(dated[i], ['Date', 'Webinar date', 'Webinar Date']));
-      if (d && d.getTime() >= today.getTime()) { chosen = dated[i]; break; }
-    }
-    if (!chosen) chosen = dated[dated.length - 1];
-
-    var tokens = {};
-    for (var key in chosen) {
-      if (!Object.prototype.hasOwnProperty.call(chosen, key)) continue;
-      var name = tokenKey(key);
-      if (name) tokens[name] = String(chosen[key]).trim();
-    }
-
-    var dateRaw = cell(chosen, ['Date', 'Webinar date', 'Webinar Date']);
-    var longRaw = cell(chosen, ['Webinar date', 'Webinar Date']);
-    var timeRaw = cell(chosen, ['Time', 'Webinar Time']);
-    var parsed  = parseDate(dateRaw);
-
-    if (parsed) {
-      var day = DAYS[parsed.getUTCDay()];
-      var dayNum = parsed.getUTCDate();
-      var year = parsed.getUTCFullYear();
-      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
-
-      tokens.WEBINAR_DAY = day;
-      tokens.WEBINAR_DATE = day + ' ' + dayNum + ' ' + MONTHS_SHORT[parsed.getUTCMonth()] + ', ' + year;
-      tokens.WEBINAR_DATE_LONG = longRaw || (day + ', ' + dayNum + ' ' + MONTHS_LONG[parsed.getUTCMonth()] + ' ' + year);
-      tokens.WEBINAR_DATE_SHORT = dayNum + ' ' + MONTHS_SHORT[parsed.getUTCMonth()];
-      tokens.WEBINAR_DATE_ISO = year + '-' + pad(parsed.getUTCMonth() + 1) + '-' + pad(dayNum);
-    } else {
-      tokens.WEBINAR_DATE = longRaw || dateRaw;
-      tokens.WEBINAR_DATE_LONG = longRaw || dateRaw;
-    }
-
-    tokens.WEBINAR_TIME = timeRaw;
-    if (timeRaw) {
-      var parts = timeRaw.split(/\s*[-–—]\s*|\s+to\s+/i);
-      tokens.WEBINAR_START_TIME = (parts[0] || '').trim();
-      tokens.WEBINAR_END_TIME = (parts[1] || '').trim();
-    }
-    return tokens;
-  }
-
-  /* ------------------------------------------------------------------ *
-   * 5. Getting the data                                                 *
-   * ------------------------------------------------------------------ */
-
-  function bust() { return '_=' + Math.floor(Date.now() / 60000); } // refresh at most once a minute
-
-  function warn(where, message) {
-    if (window.console && console.warn) console.warn('[webinar-date-sync]', where, message);
-  }
-
-  // A <script> tag is not governed by CORS, so this works wherever the page is served from.
-  function loadViaJsonp(url, done) {
+  // Loaded as a <script>, which no browser CORS rule applies to.
+  function load(done) {
     var name = 'wdsCb' + Math.floor(Math.random() * 1e9);
     var script = document.createElement('script');
     var finished = false;
 
-    function finish(tokens, why) {
+    function finish(date, why) {
       if (finished) return;
       finished = true;
       try { delete window[name]; } catch (e) { window[name] = undefined; }
       if (script.parentNode) script.parentNode.removeChild(script);
-      if (why) warn(url, why);
-      done(tokens);
+      if (why) warn(why);
+      done(date);
     }
 
     window[name] = function (data) {
-      if (data && data.ok && data.tokens) finish(data.tokens, null);
-      else finish(null, (data && data.error) || 'the script returned no data');
+      if (data && data.ok && data.date) finish(String(data.date), null);
+      else finish(null, (data && data.error) || 'the script sent back no date');
     };
-    script.onerror = function () { finish(null, 'could not load the Apps Script URL'); };
+    script.onerror = function () { finish(null, 'could not load ' + WEBINAR_DATE_URL); };
 
-    script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + name + '&' + bust();
+    script.src = WEBINAR_DATE_URL +
+      (WEBINAR_DATE_URL.indexOf('?') === -1 ? '?' : '&') +
+      'callback=' + name +
+      '&_=' + Math.floor(Date.now() / 60000);   // refresh at most once a minute
+
     (document.head || document.documentElement).appendChild(script);
-  }
-
-  function loadViaCsv(urls, done) {
-    if (!urls.length) return done(null);
-    var url = urls[0];
-    fetch(url, { credentials: 'omit', cache: 'no-store' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        if (/^\s*</.test(text)) throw new Error('got HTML, not CSV - sheet is probably not shared publicly');
-        var tokens = buildTokens(toObjects(parseCsv(text)));
-        if (!tokens) throw new Error('no dated rows found');
-        done(tokens);
-      })
-      .catch(function (err) {
-        warn(url, err.message);
-        loadViaCsv(urls.slice(1), done);
-      });
-  }
-
-  function csvUrls() {
-    var urls = [];
-    if (PUBLISHED_CSV_URL) {
-      urls.push(PUBLISHED_CSV_URL + (PUBLISHED_CSV_URL.indexOf('?') === -1 ? '?' : '&') + bust());
-    }
-    urls.push('https://docs.google.com/spreadsheets/d/' + SHEET_ID +
-              '/gviz/tq?tqx=out:csv&gid=' + TAB_GID + '&' + bust());
-    return urls;
   }
 
   function start() {
     collectSpots();
-    if (!textSpots.length && !attrSpots.length) return;
+    if (!spots.length) return;
 
-    setTimeout(function () { applyTokens(FALLBACK, true); }, GIVE_UP_AFTER_MS);
+    setTimeout(function () { show(FALLBACK_DATE); }, GIVE_UP_AFTER_MS);
 
-    var done = function (tokens) {
-      if (tokens) applyTokens(tokens, false);
-      else applyTokens(FALLBACK, true);
-    };
-
-    if (APPS_SCRIPT_URL) return loadViaJsonp(APPS_SCRIPT_URL, done);
-    if (typeof fetch !== 'function') return done(null);
-    loadViaCsv(csvUrls(), done);
+    if (!WEBINAR_DATE_URL) {
+      warn('WEBINAR_DATE_URL is empty - paste your Apps Script /exec URL into it');
+      return show(FALLBACK_DATE);
+    }
+    load(function (date) { show(date || FALLBACK_DATE); });
   }
 
   if (document.readyState === 'loading') {

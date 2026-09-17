@@ -11,123 +11,105 @@ const check = (label, actual, expected) => {
     (ok ? '' : '   (expected ' + JSON.stringify(expected) + ')'));
 };
 
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-function makeEnv(grid, displayGrid) {
-  const Utilities = {
-    // Enough of Java's SimpleDateFormat for the patterns Code.gs uses.
-    formatDate(d, tz, pattern) {
-      const p2 = (n) => String(n).padStart(2, '0');
-      return pattern
-        .replace(/EEEE/g, DAYS[d.getDay()])
-        .replace(/MMMM/g, MONTHS[d.getMonth()])
-        .replace(/MMM/g, MONTHS[d.getMonth()].slice(0, 3))
-        .replace(/yyyy/g, d.getFullYear())
-        .replace(/MM/g, p2(d.getMonth() + 1))
-        .replace(/dd/g, p2(d.getDate()))
-        .replace(/\bd\b/g, d.getDate());
-    }
-  };
-  const range = {
-    getValues: () => grid,
-    getDisplayValues: () => displayGrid || grid.map(r => r.map(c =>
-      Object.prototype.toString.call(c) === '[object Date]'
-        ? `${String(c.getDate()).padStart(2,'0')}/${String(c.getMonth()+1).padStart(2,'0')}/${c.getFullYear()}`
-        : String(c)))
-  };
+function load(grid, tabName = 'Webinar Automation Sheet') {
   const SpreadsheetApp = {
-    openById: () => ({ getSheetByName: (n) => (n === 'Webinar Automation Sheet' ? { getDataRange: () => range } : null) })
+    openById: () => ({
+      getSheetByName: (n) => (n === tabName
+        ? { getDataRange: () => ({ getDisplayValues: () => grid }) }
+        : null)
+    })
   };
-  let lastMime = null;
   const ContentService = {
     MimeType: { JSON: 'JSON', JAVASCRIPT: 'JAVASCRIPT' },
-    createTextOutput: (t) => ({ _t: t, setMimeType(m) { lastMime = m; this._mime = m; return this; } })
+    createTextOutput: (t) => ({ _t: t, setMimeType(m) { this._mime = m; return this; } })
   };
   const Logger = { log() {} };
-  const sandbox = { Utilities, SpreadsheetApp, ContentService, Logger, Date, JSON, String, Number, Object, isNaN, RegExp };
-  const fn = new Function(...Object.keys(sandbox), src + '\n;return { doGet, buildPayload_ };');
-  return fn(...Object.values(sandbox));
+  const sandbox = { SpreadsheetApp, ContentService, Logger, Date, JSON, String, Number, Object, RegExp };
+  return new Function(...Object.keys(sandbox),
+    src + '\n;return { doGet, readWebinarDate_ };')(...Object.values(sandbox));
 }
 
-const HEADERS = ['Webinar Code','Date','Time','Webinar date','Zoom URL','Group Link'];
+const HEADERS = ['Webinar Code', 'Date', 'Time', 'Webinar date', 'Zoom URL', 'Group Link'];
+const ROW = ['CCM 21/09/26', '21/09/2026', '7:30 PM - 9:30 PM', 'Monday, 21 September 2026', 'z', 'g'];
 
-console.log('--- Date stored as a real spreadsheet date ---');
+console.log('--- Reads column D exactly as typed ---');
 {
-  const env = makeEnv([
-    HEADERS,
-    ['CCM 21/09/26', new Date(2099, 8, 21), '7:30 PM - 9:30 PM', 'Monday, 21 September 2099',
-     'https://zoom.example/reg', 'https://chat.whatsapp.com/xyz']
+  const env = load([HEADERS, ROW]);
+  check('returns the cell verbatim', env.readWebinarDate_(), 'Monday, 21 September 2026');
+}
+{
+  // Whatever they type is what shows - no reformatting, no date parsing.
+  const env = load([HEADERS, [...ROW.slice(0, 3), '  Sat 3 Jan 2099 — 8pm IST  ', 'z', 'g']]);
+  check('no reformatting, only trimmed', env.readWebinarDate_(), 'Sat 3 Jan 2099 — 8pm IST');
+}
+
+console.log('\n--- Finding the column ---');
+{
+  // Header lookup wins, even if the column moves.
+  const env = load([
+    ['Date', 'Webinar date', 'Zoom URL'],
+    ['21/09/2026', 'Monday, 21 September 2026', 'z']
   ]);
-  const t = env.buildPayload_().tokens;
-  check('WEBINAR_DATE', t.WEBINAR_DATE, 'Monday 21 Sep, 2099');
-  check('WEBINAR_DATE_ISO', t.WEBINAR_DATE_ISO, '2099-09-21');
-  check('WEBINAR_DATE_SHORT', t.WEBINAR_DATE_SHORT, '21 Sep');
-  check('WEBINAR_DAY', t.WEBINAR_DAY, 'Monday');
-  check('sheet column kept verbatim', t.WEBINAR_DATE_LONG, 'Monday, 21 September 2099');
-  check('WEBINAR_TIME', t.WEBINAR_TIME, '7:30 PM - 9:30 PM');
-  check('WEBINAR_START_TIME', t.WEBINAR_START_TIME, '7:30 PM');
-  check('ZOOM_URL', t.ZOOM_URL, 'https://zoom.example/reg');
-  check('WEBINAR_CODE', t.WEBINAR_CODE, 'CCM 21/09/26');
-}
-
-console.log('\n--- Date stored as DD/MM/YYYY text ---');
-{
-  const env = makeEnv([HEADERS, ['CCM','21/09/2099','7:30 PM - 9:30 PM','','','']]);
-  check('parses DD/MM as day-first', env.buildPayload_().tokens.WEBINAR_DATE, 'Monday 21 Sep, 2099');
+  check('follows the header, not position', env.readWebinarDate_(), 'Monday, 21 September 2026');
 }
 {
-  const env = makeEnv([HEADERS, ['X','03/04/2099','','','','']]);
-  check('03/04 is 3 April not 4 March', env.buildPayload_().tokens.WEBINAR_DATE, 'Friday 3 Apr, 2099');
-}
-
-console.log('\n--- Picking the row ---');
-{
-  const env = makeEnv([
-    ['Webinar Code','Date'],
-    ['PAST','01/01/2020'],
-    ['NEXT','25/12/2099'],
-    ['LATER','31/12/2099']
+  // Header renamed: fall back to column D by position.
+  const env = load([
+    ['Webinar Code', 'Date', 'Time', 'When it happens', 'Zoom URL'],
+    ['CCM', '21/09/2026', '7:30 PM', 'Monday, 21 September 2026', 'z']
   ]);
-  const p = env.buildPayload_();
-  check('skips past rows', p.tokens.WEBINAR_CODE, 'NEXT');
-  check('flags a real upcoming match', p.matchedUpcoming, true);
+  check('falls back to column D', env.readWebinarDate_(), 'Monday, 21 September 2026');
 }
 {
-  const env = makeEnv([['Webinar Code','Date'], ['A','01/01/2020'], ['B','02/02/2021']]);
-  const p = env.buildPayload_();
-  check('all past -> last row', p.tokens.WEBINAR_CODE, 'B');
-  check('flags the fallback', p.matchedUpcoming, false);
+  const env = load([HEADERS, ['a', 'b', 'c', 'Case Insensitive', 'z', 'g']].map(r => r));
+  const env2 = load([['webinar DATE'], ['Tuesday, 1 January 2030']]);
+  check('header match ignores case', env2.readWebinarDate_(), 'Tuesday, 1 January 2030');
+  check('still reads D', env.readWebinarDate_(), 'Case Insensitive');
+}
+
+console.log('\n--- Blank rows ---');
+{
+  const env = load([HEADERS, ['', '', '', '', '', ''], ROW]);
+  check('skips an empty row', env.readWebinarDate_(), 'Monday, 21 September 2026');
+}
+
+console.log('\n--- Errors are reported, not thrown ---');
+{
+  const env = load([HEADERS, ['CCM', '21/09/2026', '7:30 PM', '', 'z', 'g']]);
+  const out = JSON.parse(env.doGet({ parameter: {} })._t);
+  check('ok:false when D is empty', out.ok, false);
+  check('says which column', /Webinar date/.test(out.error), true);
+}
+{
+  const env = load([HEADERS, ROW], 'Some Other Tab');
+  const out = JSON.parse(env.doGet({ parameter: {} })._t);
+  check('ok:false when the tab is missing', out.ok, false);
+  check('names the tab', /not found/.test(out.error), true);
+}
+{
+  const env = load([HEADERS]);
+  check('ok:false with no data rows', JSON.parse(env.doGet({ parameter: {} })._t).ok, false);
 }
 
 console.log('\n--- doGet output ---');
 {
-  const env = makeEnv([HEADERS, ['CCM','21/09/2099','7:30 PM - 9:30 PM','','','']]);
+  const env = load([HEADERS, ROW]);
 
   const plain = env.doGet({ parameter: {} });
   check('plain call is JSON', plain._mime, 'JSON');
-  check('plain call parses', JSON.parse(plain._t).ok, true);
+  check('plain call carries the date', JSON.parse(plain._t).date, 'Monday, 21 September 2026');
 
   const jsonp = env.doGet({ parameter: { callback: 'wdsCb123' } });
   check('JSONP mime is JAVASCRIPT', jsonp._mime, 'JAVASCRIPT');
   check('JSONP wraps in the callback', jsonp._t.slice(0, 9), 'wdsCb123(');
-  check('JSONP ends correctly', jsonp._t.slice(-2), ');');
+  check('JSONP closes', jsonp._t.slice(-2), ');');
 
-  // A callback name is injected straight into a <script> body, so it must be rejected.
+  // The callback name lands inside a <script> body, so it must be validated.
   const evil = env.doGet({ parameter: { callback: 'x);alert(document.cookie);//' } });
   check('rejects an injected callback', evil._mime, 'JSON');
   check('injected text never echoed', /alert/.test(evil._t), false);
-  check('rejects a callback with a dot', env.doGet({ parameter: { callback: 'a.b' } })._mime, 'JSON');
+  check('rejects a dotted name', env.doGet({ parameter: { callback: 'a.b' } })._mime, 'JSON');
   check('accepts a plain name', env.doGet({ parameter: { callback: '_cb$1' } })._mime, 'JAVASCRIPT');
-}
-
-console.log('\n--- Failure is reported, not thrown ---');
-{
-  const env = makeEnv([['Webinar Code'], ['CCM']]);
-  const out = JSON.parse(env.doGet({ parameter: {} })._t);
-  check('ok:false when no date', out.ok, false);
-  check('explains why', /usable Date/.test(out.error), true);
-  check('still returns tokens object', typeof out.tokens, 'object');
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
