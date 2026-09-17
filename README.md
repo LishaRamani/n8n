@@ -36,21 +36,20 @@ in the past, it shows the last row rather than going blank.
 
 ## Setup — three steps, once
 
-### 1. Let the page read the sheet
+### 1. Let the page read the sheet — already done
 
 The visitor's browser fetches the sheet, so that one tab has to be readable without a Google login.
+**This file is already shared as *Anyone with the link → Viewer***, which is exactly what the
+snippet needs. Nothing to change.
 
-Either:
+Two things worth knowing about that:
 
-- **Share the file** — Share → General access → *Anyone with the link* → Viewer. Simplest, but it
-  exposes every tab in the file to anyone who has the link.
-- **Publish just the one tab (recommended)** — File → Share → **Publish to web** →
-  choose **Webinar Automation Sheet** and **Comma-separated values (.csv)** → Publish.
-  Only that tab becomes readable; the ad copy and hooks tabs stay private.
-  Copy the URL it gives you and paste it into `PUBLISHED_CSV_URL` in the snippet.
-
-Either way, treat everything in that tab as public — the Zoom and WhatsApp links in it are
-already going out on the landing page, so that is normally fine.
+- It also means every other tab in the file — Ads Content, Hooks, VSL Ads, CTWA, Sales Driven —
+  is readable by anyone holding the link. That was already true before this change.
+- To narrow it, use **File → Share → Publish to web**, pick **Webinar Automation Sheet** and
+  **Comma-separated values (.csv)**, then restrict the file itself back to specific people.
+  Paste the published URL into `PUBLISHED_CSV_URL` in the snippet. The file is owned by
+  `rajat.m.sinha@gmail.com`, so that change may need their account.
 
 ### 2. Paste the snippet into the page
 
@@ -69,6 +68,12 @@ Keep the element, the icon and the styling exactly as they are — only the word
 
 Save and view the **live page** (not the editor preview — systeme.io does not run scripts inside
 the editor). The placeholders should come out as the date from the sheet.
+
+### Check it before you touch the page
+
+Open [`systeme-io/test-in-browser.html`](systeme-io/test-in-browser.html) in Chrome — double-click
+the file. It runs the real snippet against the real sheet and tells you in one line whether the
+connection works, what date the page will show, and what to fix if it doesn't.
 
 > The sheet currently says **21 September 2026** while the page says 17 September. Once this is
 > installed the page will follow the sheet, so make sure the sheet holds the date you actually want.
@@ -124,7 +129,11 @@ page edited either.
 ## Tests
 
 `test/` covers the CSV parsing, DD/MM date handling, upcoming-row selection, placeholder
-substitution, and the three live-page scenarios (sheet reachable, unreachable, and not shared).
+substitution, the three live-page scenarios (sheet reachable, unreachable, not shared), and the
+browser tester's own reporting.
+
+These run against a stubbed network. Whether Google actually serves the sheet to a browser can only
+be confirmed from a real browser — that is what `test-in-browser.html` is for.
 
 ```bash
 npm install          # jsdom, for the DOM test

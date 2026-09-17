@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Webinar Date Sync — Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #eef1f3;
+    --surface: #ffffff;
+    --ink: #10181d;
+    --ink-soft: #55656f;
+    --line: #d5dce0;
+    --accent: #0f6068;
+    --ok: #176b45;
+    --ok-bg: #e4f2ea;
+    --bad: #9d2f24;
+    --bad-bg: #fbe9e6;
+    --warn: #8a5a00;
+    --warn-bg: #fbf0da;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #11171b; --surface: #192127; --ink: #e8eef1; --ink-soft: #94a5af;
+      --line: #2c383f; --accent: #4fb3bd;
+      --ok: #6ddba0; --ok-bg: #17301f; --bad: #f2a099; --bad-bg: #331a17;
+      --warn: #e9be6a; --warn-bg: #2f2513;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    padding: 0 16px 64px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { padding-block: 40px 24px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin: 0; }
+  h2 {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--ink-soft); margin: 32px 0 10px;
+  }
+  .verdict {
+    border-radius: 10px; padding: 18px 20px; display: flex; gap: 14px; align-items: flex-start;
+    border: 1px solid var(--line); background: var(--surface);
+  }
+  .verdict.pass { background: var(--ok-bg); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+  .verdict.fail { background: var(--bad-bg); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+  .verdict-mark { font-size: 20px; line-height: 1.3; }
+  .verdict-title { font-weight: 600; margin: 0 0 3px; }
+  .verdict.pass .verdict-title { color: var(--ok); }
+  .verdict.fail .verdict-title { color: var(--bad); }
+  .verdict-body { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .verdict-body code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+
+  /* Mock of the live landing page section */
+  .lp {
+    background: #0b0b0b; border-radius: 10px; padding: 22px 18px;
+    display: flex; flex-wrap: wrap; gap: 12px; border: 1px solid var(--line);
+  }
+  .lp-box {
+    background: #fff; color: #111; border-radius: 7px; padding: 14px 18px;
+    font-weight: 600; font-size: 17px; flex: 1 1 210px; display: flex; gap: 10px; align-items: center;
+  }
+  .lp-icon { color: #3aa0d8; font-size: 15px; }
+  .lp-cta {
+    flex: 1 1 100%; background: #f5ff3d; color: #111; border-radius: 7px;
+    padding: 14px 18px; font-weight: 700; text-align: center; text-decoration: none;
+    display: block; font-size: 16px;
+  }
+  .caption { color: var(--ink-soft); font-size: 13px; margin: 8px 0 0; }
+
+  ul.checks { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  ul.checks li { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: baseline; }
+  ul.checks li:last-child { border-bottom: 0; }
+  .mark { font-family: var(--mono); font-size: 13px; flex: 0 0 auto; width: 16px; }
+  .mark.ok { color: var(--ok); } .mark.bad { color: var(--bad); } .mark.wait { color: var(--ink-soft); }
+  .check-label { flex: 1 1 auto; }
+  .check-detail { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); text-align: right; word-break: break-word; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
+  th { font-weight: 600; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-soft); }
+  tr:last-child td { border-bottom: 0; }
+  td.token { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+  td.value { font-family: var(--mono); word-break: break-word; }
+  .scroll { overflow-x: auto; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+  button {
+    font: inherit; font-weight: 500; padding: 9px 16px; border-radius: 7px;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=url] {
+    font: inherit; font-family: var(--mono); font-size: 13px; padding: 9px 12px;
+    border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink);
+    flex: 1 1 260px; min-width: 0;
+  }
+  pre {
+    font-family: var(--mono); font-size: 12.5px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; margin: 0; color: var(--ink-soft); white-space: pre-wrap; word-break: break-word;
+  }
+  .fix { border-left: 3px solid var(--warn); background: var(--warn-bg); padding: 14px 16px; border-radius: 0 8px 8px 0; font-size: 14px; }
+  .fix p { margin: 0 0 8px; } .fix p:last-child { margin: 0; }
+  .fix code { font-family: var(--mono); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Webinar Date Sync — Test</h1>
+    <p class="sub">Runs the real landing-page snippet against the Webinar Automation Sheet, in your browser.</p>
+  </header>
+
+  <div id="verdict" class="verdict">
+    <div class="verdict-mark" id="verdict-mark">&#8230;</div>
+    <div>
+      <p class="verdict-title" id="verdict-title">Testing&#8230;</p>
+      <p class="verdict-body" id="verdict-body">Fetching the sheet.</p>
+    </div>
+  </div>
+
+  <h2>What the landing page will show</h2>
+  <div class="lp">
+    <div class="lp-box"><span class="lp-icon">&#9635;</span><span>{{WEBINAR_DATE}}</span></div>
+    <div class="lp-box"><span class="lp-icon">&#9203;</span><span>{{WEBINAR_TIME}}</span></div>
+    <a class="lp-cta" href="{{ZOOM_URL}}">&#8594; REGISTER FREE NOW</a>
+  </div>
+  <p class="caption">A stand-in for your systeme.io section. The snippet below fills these in exactly as it will on the live page.</p>
+
+  <h2>Checks</h2>
+  <ul class="checks" id="checks"></ul>
+
+  <div class="actions">
+    <button id="rerun" type="button">Run again</button>
+    <input type="url" id="published" placeholder="Optional: paste a Publish-to-web CSV URL to test instead">
+  </div>
+
+  <div id="fix-wrap" hidden>
+    <h2>How to fix it</h2>
+    <div class="fix" id="fix"></div>
+  </div>
+
+  <h2>Placeholder values</h2>
+  <div class="scroll"><table id="tokens"><tbody><tr><td class="value">Waiting for the sheet&#8230;</td></tr></tbody></table></div>
+
+  <h2>Raw response from Google</h2>
+  <pre id="raw">Waiting&#8230;</pre>
+</div>
+
+<script>
+/* ---- diagnostics: watch what the real snippet does ---- */
+(function () {
+  var warnings = [];
+  var origWarn = console.warn;
+  console.warn = function () {
+    try {
+      var a = Array.prototype.slice.call(arguments);
+      if (String(a[0]).indexOf('[webinar-date-sync]') === 0) warnings.push(a.slice(1).join(' '));
+    } catch (e) {}
+    return origWarn.apply(console, arguments);
+  };
+
+  var CHECKS = [
+    ['reach',  'Sheet is reachable from a browser'],
+    ['cors',   'Google allows the page to read it (CORS)'],
+    ['csv',    'Response is CSV, not a sign-in page'],
+    ['rows',   'Rows parsed from the Webinar Automation Sheet'],
+    ['date',   'Date understood as DD/MM/YYYY'],
+    ['render', 'Placeholders replaced on the page']
+  ];
+
+  function renderChecks(state) {
+    var ul = document.getElementById('checks');
+    ul.innerHTML = '';
+    CHECKS.forEach(function (c) {
+      var s = state[c[0]] || {};
+      var li = document.createElement('li');
+      var cls = s.ok === true ? 'ok' : s.ok === false ? 'bad' : 'wait';
+      var glyph = s.ok === true ? '\u2713' : s.ok === false ? '\u2715' : '\u00b7';
+      li.innerHTML = '<span class="mark ' + cls + '">' + glyph + '</span>' +
+        '<span class="check-label"></span><span class="check-detail"></span>';
+      li.querySelector('.check-label').textContent = c[1];
+      li.querySelector('.check-detail').textContent = s.detail || '';
+      ul.appendChild(li);
+    });
+  }
+  renderChecks({});
+
+  function showTokens(tokens) {
+    var tb = document.getElementById('tokens').querySelector('tbody');
+    tb.innerHTML = '';
+    var keys = Object.keys(tokens).sort();
+    if (!keys.length) { tb.innerHTML = '<tr><td class="value">None</td></tr>'; return; }
+    var head = document.createElement('tr');
+    head.innerHTML = '<th>Placeholder</th><th>Becomes</th>';
+    tb.appendChild(head);
+    keys.forEach(function (k) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td class="token"></td><td class="value"></td>';
+      tr.children[0].textContent = '{{' + k + '}}';
+      tr.children[1].textContent = tokens[k];
+      tb.appendChild(tr);
+    });
+  }
+
+  function verdict(kind, title, body) {
+    var el = document.getElementById('verdict');
+    el.className = 'verdict ' + kind;
+    document.getElementById('verdict-mark').textContent =
+      kind === 'pass' ? '\u2713' : kind === 'fail' ? '\u2715' : '\u2026';
+    document.getElementById('verdict-title').textContent = title;
+    document.getElementById('verdict-body').innerHTML = body;
+  }
+
+  function showFix(html) {
+    document.getElementById('fix-wrap').hidden = false;
+    document.getElementById('fix').innerHTML = html;
+  }
+
+  // The snippet announces its result on this event.
+  document.addEventListener('webinar-date-sync', function (e) {
+    var tokens = e.detail || {};
+    // Only a real sheet parse sets WEBINAR_DATE_ISO; the baked-in fallback does not.
+    var live = Object.prototype.hasOwnProperty.call(tokens, 'WEBINAR_DATE_ISO');
+    var blockedByCors = warnings.some(function (w) { return /Failed to fetch|NetworkError|CORS/i.test(w); });
+    var gotHtml = warnings.some(function (w) { return /got HTML, not CSV/i.test(w); });
+
+    showTokens(tokens);
+
+    renderChecks({
+      reach:  { ok: !blockedByCors, detail: blockedByCors ? 'request blocked' : 'responded' },
+      cors:   { ok: !blockedByCors, detail: blockedByCors ? 'no Access-Control-Allow-Origin' : 'allowed' },
+      csv:    { ok: !blockedByCors && !gotHtml, detail: gotHtml ? 'got an HTML page' : (blockedByCors ? '\u2014' : 'CSV') },
+      rows:   { ok: live, detail: live ? 'row read' : '\u2014' },
+      date:   { ok: live, detail: live ? tokens.WEBINAR_DATE_ISO : '\u2014' },
+      render: { ok: true, detail: 'done' }
+    });
+
+    if (live) {
+      verdict('pass', 'Working.',
+        'Your landing page will show <code>' + tokens.WEBINAR_DATE +
+        '</code> and <code>' + tokens.WEBINAR_TIME + '</code>. Change the sheet, reload, and this updates.');
+    } else if (gotHtml) {
+      verdict('fail', 'The sheet is not readable without a Google login.',
+        'Google returned a sign-in page instead of data, so the snippet fell back to its built-in date.');
+      showFix('<p>In the sheet: <strong>File &rarr; Share &rarr; Publish to web</strong>, choose ' +
+        '<strong>Webinar Automation Sheet</strong> and <strong>Comma-separated values (.csv)</strong>, then Publish.</p>' +
+        '<p>Paste the URL it gives you into the box above and press <strong>Run again</strong>. ' +
+        'If that works, put the same URL into <code>PUBLISHED_CSV_URL</code> in the snippet.</p>');
+    } else if (blockedByCors) {
+      verdict('fail', 'The browser blocked the request.',
+        'The sheet may still be fine \u2014 opening this file straight from your disk is stricter than a real website.');
+      showFix('<p>Try the same test on the live systeme.io page before changing anything. ' +
+        'If it fails there too, use <strong>File &rarr; Share &rarr; Publish to web</strong> as a CSV ' +
+        'and paste that URL above.</p>');
+    } else {
+      verdict('fail', 'Reached the sheet, but found no usable row.',
+        'The snippet fell back to its built-in date.');
+      showFix('<p>Check the <strong>Webinar Automation Sheet</strong> tab has a header row and at least one row ' +
+        'with a <code>Date</code> filled in, written as <code>DD/MM/YYYY</code>.</p>');
+    }
+
+    var raw = document.getElementById('raw');
+    raw.textContent = warnings.length ? warnings.join('\n') : 'No errors reported.';
+  });
+
+  document.getElementById('rerun').addEventListener('click', function () {
+    var url = document.getElementById('published').value.trim();
+    var q = url ? ('?csv=' + encodeURIComponent(url)) : '';
+    location.replace(location.pathname + q);
+  });
+
+  // Let ?csv=... override the published URL for a one-off test.
+  var m = location.search.match(/[?&]csv=([^&]+)/);
+  if (m) {
+    window.__WDS_PUBLISHED_OVERRIDE = decodeURIComponent(m[1]);
+    document.getElementById('published').value = window.__WDS_PUBLISHED_OVERRIDE;
+  }
+})();
+</script>
+
+<!-- ===== Below is the snippet that goes on the systeme.io page, copied verbatim
+         except the one line marked "TESTER ONLY", which lets the box above
+         try a Publish-to-web URL without editing the file. ===== -->
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * 1. CONFIG — the only part you may need to edit                      *
+   * ------------------------------------------------------------------ */
+
+  var SHEET_ID = '18lW19qAZRtbnjctCEtT8iegjSvg0z5p0MHnY-tdH5Jo';
+  var TAB_GID  = '2019145575'; // "Webinar Automation Sheet" tab
+
+  // Optional. Only needed if the gviz URL below is blocked for your sheet.
+  // Google Sheets -> File -> Share -> Publish to web
+  //   -> pick "Webinar Automation Sheet" + "Comma-separated values (.csv)"
+  // Paste the URL it gives you between the quotes.
+  var PUBLISHED_CSV_URL = window.__WDS_PUBLISHED_OVERRIDE || ''; /* TESTER ONLY: the shipped file has '' here */
+
+  // Shown if the sheet cannot be reached at all, so the page is never blank.
+  var FALLBACK = {
+    WEBINAR_DATE: 'Monday 21 Sep, 2026',
+    WEBINAR_TIME: '7:30 PM - 9:30 PM'
+  };
+
+  var TIMEZONE_OFFSET_HOURS = 5.5; // IST — decides which row counts as "upcoming"
+  var GIVE_UP_AFTER_MS = 3000;
+
+  /* ------------------------------------------------------------------ *
+   * 2. Placeholder handling                                             *
+   * ------------------------------------------------------------------ */
+
+  var TOKEN_RE = /\{\{\s*([A-Z0-9_]+)\s*\}\}|\[\[\s*([A-Z0-9_]+)\s*\]\]/g;
+  var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
+  var textSpots = [];
+  var attrSpots = [];
+  var settled = false;
+
+  function collectSpots() {
+    var walker = document.createTreeWalker(
+      document.body, NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function (n) {
+          if (!n.nodeValue || n.nodeValue.indexOf('{{') === -1 && n.nodeValue.indexOf('[[') === -1) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (n.parentNode && SKIP_TAGS[n.parentNode.nodeName]) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      },
+      false
+    );
+
+    var node;
+    while ((node = walker.nextNode())) {
+      TOKEN_RE.lastIndex = 0;
+      if (!TOKEN_RE.test(node.nodeValue)) continue;
+      textSpots.push({ node: node, template: node.nodeValue, el: node.parentElement });
+    }
+
+    // Placeholders used as links / attributes, e.g. a button pointing at {{ZOOM_URL}}
+    var els = document.querySelectorAll('a[href], [data-href], form[action]');
+    for (var i = 0; i < els.length; i++) {
+      ['href', 'data-href', 'action'].forEach(function (attr) {
+        var v = els[i].getAttribute && els[i].getAttribute(attr);
+        if (!v) return;
+        TOKEN_RE.lastIndex = 0;
+        if (TOKEN_RE.test(v)) attrSpots.push({ el: els[i], attr: attr, template: v });
+      });
+    }
+
+    // Hide the raw {{...}} text so visitors never see it mid-load.
+    textSpots.forEach(function (spot) {
+      if (spot.el && spot.el.style) {
+        spot.el.setAttribute('data-wds-prev-visibility', spot.el.style.visibility || '');
+        spot.el.style.visibility = 'hidden';
+      }
+    });
+  }
+
+  function fill(template, tokens) {
+    return template.replace(TOKEN_RE, function (whole, a, b) {
+      var key = a || b;
+      return Object.prototype.hasOwnProperty.call(tokens, key) ? tokens[key] : whole;
+    });
+  }
+
+  function applyTokens(tokens) {
+    if (settled) return;
+    settled = true;
+
+    textSpots.forEach(function (spot) {
+      try { spot.node.nodeValue = fill(spot.template, tokens); } catch (e) {}
+      if (spot.el && spot.el.style) {
+        spot.el.style.visibility = spot.el.getAttribute('data-wds-prev-visibility') || '';
+        spot.el.removeAttribute('data-wds-prev-visibility');
+      }
+    });
+
+    attrSpots.forEach(function (spot) {
+      try {
+        var next = fill(spot.template, tokens);
+        spot.el.setAttribute(spot.attr, next);
+        if (spot.attr === 'href') spot.el.setAttribute('target', spot.el.getAttribute('target') || '_blank');
+      } catch (e) {}
+    });
+
+    try {
+      document.dispatchEvent(new CustomEvent('webinar-date-sync', { detail: tokens }));
+    } catch (e) {}
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 3. CSV parsing                                                      *
+   * ------------------------------------------------------------------ */
+
+  function parseCsv(text) {
+    var rows = [], row = [], field = '', inQuotes = false, i = 0;
+    text = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    for (; i < text.length; i++) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+    row.push(field);
+    rows.push(row);
+
+    return rows.filter(function (r) {
+      return r.some(function (cell) { return String(cell).trim() !== ''; });
+    });
+  }
+
+  function toObjects(rows) {
+    if (!rows.length) return [];
+    var headers = rows[0].map(function (h) { return String(h).trim(); });
+    return rows.slice(1).map(function (r) {
+      var o = {};
+      headers.forEach(function (h, idx) { if (h) o[h] = (r[idx] || '').trim(); });
+      return o;
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 4. Dates                                                            *
+   * ------------------------------------------------------------------ */
+
+  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var MONTHS_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  function cell(row, names) {
+    for (var n = 0; n < names.length; n++) {
+      for (var key in row) {
+        if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
+        if (key.trim().toLowerCase() === names[n].toLowerCase()) {
+          var v = row[key];
+          if (v !== null && v !== undefined && String(v).trim() !== '') return String(v).trim();
+        }
+      }
+    }
+    return '';
+  }
+
+  function parseDate(raw) {
+    if (!raw) return null;
+    var text = String(raw).trim();
+    if (!text) return null;
+
+    var m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); // DD/MM/YYYY
+    if (m) {
+      var y = Number(m[3]);
+      if (y < 100) y += 2000;
+      return new Date(Date.UTC(y, Number(m[2]) - 1, Number(m[1])));
+    }
+
+    m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // ISO
+    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+
+    var loose = new Date(text.replace(/(\d)(st|nd|rd|th)/gi, '$1')); // "Monday, 21 September 2026"
+    if (!isNaN(loose.getTime())) {
+      return new Date(Date.UTC(loose.getFullYear(), loose.getMonth(), loose.getDate()));
+    }
+    return null;
+  }
+
+  function startOfLocalToday() {
+    var shifted = new Date(Date.now() + TIMEZONE_OFFSET_HOURS * 3600000);
+    return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
+  }
+
+  function tokenKey(header) {
+    return String(header).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  }
+
+  function buildTokens(rows) {
+    var dated = rows.filter(function (r) {
+      return cell(r, ['Date', 'Webinar date', 'Webinar Date']) !== '';
+    });
+    if (!dated.length) return null;
+
+    var today = startOfLocalToday(), chosen = null;
+    for (var i = 0; i < dated.length; i++) {
+      var d = parseDate(cell(dated[i], ['Date', 'Webinar date', 'Webinar Date']));
+      if (d && d.getTime() >= today.getTime()) { chosen = dated[i]; break; }
+    }
+    if (!chosen) chosen = dated[dated.length - 1];
+
+    var tokens = {};
+    for (var key in chosen) {
+      if (!Object.prototype.hasOwnProperty.call(chosen, key)) continue;
+      var name = tokenKey(key);
+      if (name) tokens[name] = String(chosen[key]).trim();
+    }
+
+    var dateRaw = cell(chosen, ['Date', 'Webinar date', 'Webinar Date']);
+    var longRaw = cell(chosen, ['Webinar date', 'Webinar Date']);
+    var timeRaw = cell(chosen, ['Time', 'Webinar Time']);
+    var parsed  = parseDate(dateRaw);
+
+    if (parsed) {
+      var day = DAYS[parsed.getUTCDay()];
+      var dayNum = parsed.getUTCDate();
+      var year = parsed.getUTCFullYear();
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+
+      tokens.WEBINAR_DAY = day;
+      tokens.WEBINAR_DATE = day + ' ' + dayNum + ' ' + MONTHS_SHORT[parsed.getUTCMonth()] + ', ' + year;
+      tokens.WEBINAR_DATE_LONG = longRaw || (day + ', ' + dayNum + ' ' + MONTHS_LONG[parsed.getUTCMonth()] + ' ' + year);
+      tokens.WEBINAR_DATE_SHORT = dayNum + ' ' + MONTHS_SHORT[parsed.getUTCMonth()];
+      tokens.WEBINAR_DATE_ISO = year + '-' + pad(parsed.getUTCMonth() + 1) + '-' + pad(dayNum);
+    } else {
+      tokens.WEBINAR_DATE = longRaw || dateRaw;
+      tokens.WEBINAR_DATE_LONG = longRaw || dateRaw;
+    }
+
+    tokens.WEBINAR_TIME = timeRaw;
+    if (timeRaw) {
+      var parts = timeRaw.split(/\s*[-–—]\s*|\s+to\s+/i);
+      tokens.WEBINAR_START_TIME = (parts[0] || '').trim();
+      tokens.WEBINAR_END_TIME = (parts[1] || '').trim();
+    }
+    return tokens;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 5. Fetch                                                            *
+   * ------------------------------------------------------------------ */
+
+  function candidateUrls() {
+    var bust = '_=' + Math.floor(Date.now() / 60000); // refresh at most once a minute
+    var urls = [];
+    if (PUBLISHED_CSV_URL) {
+      urls.push(PUBLISHED_CSV_URL + (PUBLISHED_CSV_URL.indexOf('?') === -1 ? '?' : '&') + bust);
+    }
+    urls.push('https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+              '/gviz/tq?tqx=out:csv&gid=' + TAB_GID + '&' + bust);
+    return urls;
+  }
+
+  function tryUrls(urls, done) {
+    if (!urls.length) return done(null);
+    var url = urls[0];
+    fetch(url, { credentials: 'omit', cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        if (/^\s*</.test(text)) throw new Error('got HTML, not CSV — sheet is probably not shared publicly');
+        var tokens = buildTokens(toObjects(parseCsv(text)));
+        if (!tokens) throw new Error('no dated rows found');
+        done(tokens);
+      })
+      .catch(function (err) {
+        if (window.console) console.warn('[webinar-date-sync]', url, err.message);
+        tryUrls(urls.slice(1), done);
+      });
+  }
+
+  function start() {
+    collectSpots();
+    if (!textSpots.length && !attrSpots.length) return;
+
+    setTimeout(function () { applyTokens(FALLBACK); }, GIVE_UP_AFTER_MS);
+
+    if (typeof fetch !== 'function') return applyTokens(FALLBACK);
+
+    tryUrls(candidateUrls(), function (tokens) {
+      applyTokens(tokens || FALLBACK);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+</body>
+</html>
