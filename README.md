@@ -76,9 +76,13 @@ A hard reload (Cmd-Shift-R) rules out the browser holding the old page itself.
 
 ## What happens when something breaks
 
-The page never shows a broken `{{WEBINAR_DATE}}`. The placeholder is hidden until it has a real
-value, and if the script cannot be reached within four seconds the page falls back to the date
-written into `FALLBACK_DATE` near the top of the snippet. Keep that roughly current.
+The page never shows a broken `{{WEBINAR_DATE}}`. The placeholder is hidden until it has a value.
+
+Apps Script can take several seconds to wake from cold, so after 2.5 seconds the page shows
+`FALLBACK_DATE` from the top of the snippet rather than leaving a gap — and then replaces it the
+moment the real answer arrives, however late. The fallback only stays if the script never answers
+at all. **Keep `FALLBACK_DATE` roughly current**, since it is what a visitor sees for the first
+second or two and what they keep if Google is unreachable.
 
 ### If the date doesn't change
 

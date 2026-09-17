@@ -16,15 +16,19 @@
   // The Apps Script /exec URL. Paste it between the quotes.
   var WEBINAR_DATE_URL = 'https://script.google.com/macros/s/AKfycbymVVU3LAAZHMDd7ATyKQK3_hIfCyU0k7hFeuHZqRC5WrmnEBq4QjjZBKPxhiP-hswMYA/exec';
 
-  // Shown only if the script cannot be reached, so the page is never blank.
+  // Shown while waiting, and left in place if the script never answers,
+  // so the page is never blank. Keep it roughly current.
   var FALLBACK_DATE = 'Monday, 21 September 2026';
 
-  var GIVE_UP_AFTER_MS = 4000;
+  // Apps Script can take several seconds on a cold start. Rather than give up,
+  // the fallback is painted at this point and replaced whenever the real
+  // answer arrives, however long that takes.
+  var SHOW_FALLBACK_AFTER_MS = 2500;
 
   var TOKEN_RE = /\{\{\s*WEBINAR_DATE\s*\}\}/g;
   var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
   var spots = [];
-  var settled = false;
+  var shownReal = false;
 
   function collectSpots() {
     var walker = document.createTreeWalker(
@@ -55,20 +59,24 @@
     });
   }
 
-  function show(date) {
-    if (settled) return;
-    settled = true;
+  // isReal: this came from the sheet. A real answer wins and is final; the
+  // fallback is only ever a placeholder that a later real answer replaces.
+  function show(date, isReal) {
+    if (shownReal) return;
+    if (isReal) shownReal = true;
 
     spots.forEach(function (spot) {
       try { spot.node.nodeValue = spot.template.replace(TOKEN_RE, date); } catch (e) {}
-      if (spot.el && spot.el.style) {
+      if (spot.el && spot.el.style && spot.el.hasAttribute('data-wds-prev-visibility')) {
         spot.el.style.visibility = spot.el.getAttribute('data-wds-prev-visibility') || '';
         spot.el.removeAttribute('data-wds-prev-visibility');
       }
     });
 
     try {
-      document.dispatchEvent(new CustomEvent('webinar-date-sync', { detail: { date: date } }));
+      document.dispatchEvent(new CustomEvent('webinar-date-sync', {
+        detail: { date: date, live: !!isReal }
+      }));
     } catch (e) {}
   }
 
@@ -111,13 +119,13 @@
     collectSpots();
     if (!spots.length) return;
 
-    setTimeout(function () { show(FALLBACK_DATE); }, GIVE_UP_AFTER_MS);
-
     if (!WEBINAR_DATE_URL) {
       warn('WEBINAR_DATE_URL is empty - paste your Apps Script /exec URL into it');
-      return show(FALLBACK_DATE);
+      return show(FALLBACK_DATE, false);
     }
-    load(function (date) { show(date || FALLBACK_DATE); });
+
+    setTimeout(function () { show(FALLBACK_DATE, false); }, SHOW_FALLBACK_AFTER_MS);
+    load(function (date) { show(date || FALLBACK_DATE, !!date); });
   }
 
   if (document.readyState === 'loading') {

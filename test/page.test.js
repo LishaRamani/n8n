@@ -41,7 +41,7 @@ function run(respond, assert, { url = 'https://script.google.com/macros/s/TEST/e
     return realAppend(node);
   };
   w.eval(src);
-  return new Promise((r) => setTimeout(() => { assert(w.document, w); r(); }, 4500));
+  return new Promise((r) => setTimeout(() => { assert(w.document, w); r(); }, 6000));
 }
 
 const txt = (doc, sel) => doc.querySelector(sel).textContent;
@@ -83,11 +83,23 @@ const txt = (doc, sel) => doc.querySelector(sel).textContent;
     }
   );
 
+  console.log('\n--- A slow cold start still wins ---');
+  await run(
+    // Apps Script often takes several seconds on a cold start. The fallback is
+    // painted first; the real date must replace it when it finally lands.
+    (w, cb) => setTimeout(() => w[cb]({ ok: true, date: 'Thursday, 24 September 2026' }), 4000),
+    (doc) => {
+      check('late answer replaces the fallback', txt(doc, '.date-box'), 'Thursday, 24 September 2026');
+      check('replaced everywhere', txt(doc, '.spaced'),
+        'Join us on Thursday, 24 September 2026 — see you there');
+    }
+  );
+
   console.log('\n--- Nothing ever answers (timeout) ---');
   await run(
     () => {},
     (doc) => {
-      check('falls back after the timeout', txt(doc, '.date-box'), 'Monday, 21 September 2026');
+      check('fallback stays put', txt(doc, '.date-box'), 'Monday, 21 September 2026');
       check('no braces reach the visitor', /\{\{/.test(doc.body.textContent), false);
     }
   );
