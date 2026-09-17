@@ -1,0 +1,12 @@
+{
+  "name": "webinar-date-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live webinar date on a systeme.io landing page, read straight from a Google Sheet",
+  "scripts": {
+    "test": "node test/logic.test.js && node test/dom.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
