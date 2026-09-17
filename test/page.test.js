@@ -24,8 +24,9 @@ const check = (label, actual, expected) => {
 // Points the snippet at a URL, intercepts the injected <script>, and answers
 // on the callback the way the deployed Apps Script would.
 function run(respond, assert, { url = 'https://script.google.com/macros/s/TEST/exec' } = {}) {
-  const src = scriptSrc.replace("var WEBINAR_DATE_URL = '';", `var WEBINAR_DATE_URL = '${url}';`);
-  if (url && src === scriptSrc) throw new Error('could not point the snippet at a URL');
+  // Works whether or not the shipped file already has a URL baked in.
+  const src = scriptSrc.replace(/var WEBINAR_DATE_URL = '[^']*';/, `var WEBINAR_DATE_URL = '${url}';`);
+  if (src === scriptSrc) throw new Error('could not point the snippet at a URL');
 
   const dom = new JSDOM(PAGE, { runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;

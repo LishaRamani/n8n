@@ -72,16 +72,15 @@
   </header>
 
   <div class="actions">
-    <input type="url" id="endpoint" placeholder="https://script.google.com/macros/s/&#8230;/exec">
+    <input type="url" id="endpoint" value="https://script.google.com/macros/s/AKfycbw3mHw2MrIStGoPwTojJoaGVQRyJEk0To7pBMliwHdosiUaSDIdAQSOGZSWJFMAyMCr-Q/exec">
     <button id="run" type="button">Run</button>
   </div>
 
   <div id="verdict" class="verdict" style="margin-top:20px">
     <div class="verdict-mark" id="verdict-mark">&#8230;</div>
     <div>
-      <p class="verdict-title" id="verdict-title">Waiting for a URL</p>
-      <p class="verdict-body" id="verdict-body">Paste the <code>/exec</code> URL from
-        Deploy &rarr; New deployment and press Run.</p>
+      <p class="verdict-title" id="verdict-title">Testing&#8230;</p>
+      <p class="verdict-body" id="verdict-body">Asking your Apps Script for the date.</p>
     </div>
   </div>
 
@@ -171,8 +170,8 @@
 </script>
 
 <!-- ===== Below is the snippet that goes on the systeme.io page, copied verbatim
-         except the one line marked "TESTER ONLY", which lets the box above
-         drive it without editing the file. ===== -->
+         except the line marked "TESTER ONLY", which lets the box above
+         point it somewhere else. ===== -->
 <script>
 /* Webinar date -> systeme.io
  *
@@ -189,7 +188,7 @@
   'use strict';
 
   // The Apps Script /exec URL. Paste it between the quotes.
-  var WEBINAR_DATE_URL = window.__WDS_URL || ''; /* TESTER ONLY: the shipped file has '' here */
+  var WEBINAR_DATE_URL = window.__WDS_URL || 'https://script.google.com/macros/s/AKfycbw3mHw2MrIStGoPwTojJoaGVQRyJEk0To7pBMliwHdosiUaSDIdAQSOGZSWJFMAyMCr-Q/exec'; /* TESTER ONLY */
 
   // Shown only if the script cannot be reached, so the page is never blank.
   var FALLBACK_DATE = 'Monday, 21 September 2026';
