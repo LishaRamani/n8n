@@ -1,11 +1,15 @@
 /**
  * Webinar batch -> FlexiFunnels + Lovable
  *
- * Reads the one live row of the "Update webinar batch here" tab and serves it,
+ * Reads the one live row of the "FSM Webinar Automation" tab and serves it,
  * so every page can show the current date, time, Zoom link and WhatsApp
  * community link without the sheet being public.
  *
- * Change that row, reload a page, done. Nothing else to publish anywhere.
+ * That tab is now kept current automatically by the "FSM Batch Auto-
+ * Switchover" n8n workflow (creates the next Zoom meeting and writes it in,
+ * 1 hour before each webinar) - nothing to change here when that runs.
+ * WA Community Link is the one field it never touches; that still gets
+ * pasted in by hand each batch.
  *
  * Deploy:  Deploy > New deployment > Web app
  *            Execute as:      Me
@@ -20,14 +24,16 @@
  */
 
 var BATCH_SHEET_ID = '1IETAMKV4rBiGWTllQ_Ek5qVKVV2fRcx-94IMfVAAxho';
-var BATCH_TAB_NAME = 'Update webinar batch here';
+var BATCH_TAB_NAME = 'FSM Webinar Automation';
 
 // Column headers, and the position to fall back to if a header is renamed.
+// Header lookup trims each sheet header before comparing, so a trailing
+// space on the real "Date " column header doesn't need to appear here.
 var BATCH_FIELDS = [
-  { key: 'zoomUrl',      header: 'Zoom Link',     index: 0 },
-  { key: 'communityUrl', header: 'WA Group Link', index: 1 },
-  { key: 'date',         header: 'Event Date',    index: 2 },
-  { key: 'time',         header: 'Event Time',    index: 3 }
+  { key: 'zoomUrl',      header: 'Webinar Link',      index: 3 },
+  { key: 'communityUrl', header: 'WA Community Link', index: 4 },
+  { key: 'date',         header: 'Date',               index: 0 },
+  { key: 'time',         header: 'Time',               index: 1 }
 ];
 
 var MONTHS = {
@@ -71,8 +77,8 @@ function doGet(e) {
 
 /**
  * The live row is the first one carrying a real Zoom URL. That rule skips the
- * "FORMAT : (Just for reference...)" row the team keeps below the data, without
- * needing to know which row number it sits on.
+ * blank row and the "YYYY-MM-DD" format-reference row the tab keeps below the
+ * data, without needing to know which row number either sits on.
  */
 function readBatch_() {
   var sheet = SpreadsheetApp.openById(BATCH_SHEET_ID).getSheetByName(BATCH_TAB_NAME);

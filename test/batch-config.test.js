@@ -11,7 +11,7 @@ const check = (label, actual, expected) => {
     (ok ? '' : '   (expected ' + JSON.stringify(expected) + ')'));
 };
 
-function load(grid, tabName = 'Update webinar batch here') {
+function load(grid, tabName = 'FSM Webinar Automation') {
   const SpreadsheetApp = {
     openById: () => ({
       getSheetByName: (n) => (n === tabName
@@ -29,52 +29,55 @@ function load(grid, tabName = 'Update webinar batch here') {
     src + '\n;return { doGet, readBatch_, parseStartsAt_ };')(...Object.values(sandbox));
 }
 
-// Exactly what the live tab holds today, including the reference row the team
-// keeps below the data.
-const HEADERS = ['Zoom Link', 'WA Group Link', 'Event Date', 'Event Time'];
+// Exactly what the live "FSM Webinar Automation" tab holds today, including
+// the blank row and the format-reference row the tab keeps below the data.
+const HEADERS = ['Date ', 'Time', 'Webinar Title', 'Webinar Link', 'WA Community Link', 'Zoom Webinar ID', 'Tag'];
 const LIVE = [
+  '2026-09-23',
+  '19:00:00',
+  'Financial Success Model',
   'https://us06web.zoom.us/meeting/register/VdcjjVFSS9CODREjFIVPAQ',
   'https://chat.whatsapp.com/IYbbeFiMqgmHWnf3KkiCDR',
-  '23 September 2026',
-  '7:00 pm'
+  '86125903260',
+  '23/09/2026'
 ];
-const REFERENCE = ['FORMAT : (Just for reference, not used for automation )', '', '5 Sep 2026', '11:00 am'];
+const REFERENCE = ['YYYY-MM-DD', '16:30:00 (24 Hour Format)', '', '', '', '', ''];
 
 console.log('--- Reads the live row from the real tab shape ---');
 {
   const env = load([HEADERS, LIVE, [], REFERENCE]);
   const b = env.readBatch_();
-  check('zoom link', b.zoomUrl, LIVE[0]);
-  check('community link', b.communityUrl, LIVE[1]);
-  check('date verbatim', b.date, '23 September 2026');
-  check('time verbatim', b.time, '7:00 pm');
+  check('zoom link', b.zoomUrl, LIVE[3]);
+  check('community link', b.communityUrl, LIVE[4]);
+  check('date verbatim', b.date, '2026-09-23');
+  check('time verbatim', b.time, '19:00:00');
 }
 {
   // The reference row sits ABOVE the real one: still skipped, because it
   // carries no http link.
   const env = load([HEADERS, REFERENCE, LIVE]);
-  check('skips the FORMAT row wherever it sits', env.readBatch_().zoomUrl, LIVE[0]);
+  check('skips the format row wherever it sits', env.readBatch_().zoomUrl, LIVE[3]);
 }
 {
-  const env = load([HEADERS, ['   ' + LIVE[0] + '  ', ' g ', '  23 September 2026 ', ' 7:00 pm ']]);
-  check('trims each cell', env.readBatch_().date, '23 September 2026');
+  const env = load([HEADERS, ['  2026-09-23 ', ' 19:00:00 ', ' Financial Success Model ', '   ' + LIVE[3] + '  ', ' ' + LIVE[4] + ' ', ' 86125903260 ', ' 23/09/2026 ']]);
+  check('trims each cell', env.readBatch_().date, '2026-09-23');
 }
 
 console.log('\n--- Finding the columns ---');
 {
   // Header lookup wins, even when the columns are reordered.
   const env = load([
-    ['Event Date', 'Event Time', 'Zoom Link', 'WA Group Link'],
-    ['23 September 2026', '7:00 pm', LIVE[0], LIVE[1]]
+    ['Webinar Link', 'WA Community Link', 'Date ', 'Time', 'Webinar Title', 'Zoom Webinar ID', 'Tag'],
+    [LIVE[3], LIVE[4], LIVE[0], LIVE[1], LIVE[2], LIVE[5], LIVE[6]]
   ]);
   const b = env.readBatch_();
-  check('follows headers, not position', b.zoomUrl, LIVE[0]);
-  check('date from the right column', b.date, '23 September 2026');
+  check('follows headers, not position', b.zoomUrl, LIVE[3]);
+  check('date from the right column', b.date, '2026-09-23');
 }
 {
   // Headers renamed: fall back to the documented positions.
-  const env = load([['a', 'b', 'c', 'd'], LIVE]);
-  check('falls back to column order', env.readBatch_().communityUrl, LIVE[1]);
+  const env = load([['a', 'b', 'c', 'd', 'e', 'f', 'g'], LIVE]);
+  check('falls back to column order', env.readBatch_().communityUrl, LIVE[4]);
 }
 
 console.log('\n--- startsAt, the instant the countdown runs to ---');
@@ -117,8 +120,8 @@ console.log('\n--- What the pages receive ---');
   const env = load([HEADERS, LIVE]);
   const body = JSON.parse(env.doGet({}) ._t);
   check('ok', body.ok, true);
-  check('carries the zoom link', body.zoomUrl, LIVE[0]);
-  check('carries the community link', body.communityUrl, LIVE[1]);
+  check('carries the zoom link', body.zoomUrl, LIVE[3]);
+  check('carries the community link', body.communityUrl, LIVE[4]);
   check('carries startsAt', body.startsAt, '2026-09-23T13:30:00.000Z');
 }
 {
@@ -136,7 +139,7 @@ console.log('\n--- What the pages receive ---');
 
 console.log('\n--- When the sheet cannot be read ---');
 {
-  const env = load([HEADERS, [REFERENCE[0], '', '', '']]);
+  const env = load([HEADERS, [REFERENCE[0], '', '', '', '', '', '']]);
   const body = JSON.parse(env.doGet({})._t);
   check('no live row -> ok:false', body.ok, false);
   check('says why', /has a Zoom Link/.test(body.error), true);
@@ -145,7 +148,7 @@ console.log('\n--- When the sheet cannot be read ---');
   const env = load([HEADERS], 'Some other tab');
   const body = JSON.parse(env.doGet({})._t);
   check('missing tab -> ok:false', body.ok, false);
-  check('names the tab', /Update webinar batch here/.test(body.error), true);
+  check('names the tab', /FSM Webinar Automation/.test(body.error), true);
 }
 {
   const env = load([HEADERS]);
