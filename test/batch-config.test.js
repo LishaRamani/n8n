@@ -93,6 +93,12 @@ console.log('\n--- startsAt, the instant the countdown runs to ---');
   check('no minutes', p('23 September 2026', '7 pm'), '2026-09-23T13:30:00.000Z');
   check('dotted meridiem', p('23 September 2026', '7:00 p.m.'), '2026-09-23T13:30:00.000Z');
   check('24-hour time', p('23 September 2026', '19:00'), '2026-09-23T13:30:00.000Z');
+  // The FSM Webinar Automation tab writes ISO dates and 24-hour times with seconds.
+  check('iso date + seconds', p('2026-09-23', '19:00:00'), '2026-09-23T13:30:00.000Z');
+  check('iso date, no seconds', p('2026-09-23', '19:00'), '2026-09-23T13:30:00.000Z');
+  check('iso date, noon slot', p('2026-09-19', '12:00:00'), '2026-09-19T06:30:00.000Z');
+  check('iso date + am/pm', p('2026-09-23', '7:00 pm'), '2026-09-23T13:30:00.000Z');
+  check('the reference row is not a date', p('YYYY-MM-DD', '16:30:00 (24 Hour Format)'), null);
   check('midnight-crossing slot', p('23 September 2026', '12:00 am'), '2026-09-22T18:30:00.000Z');
 }
 {

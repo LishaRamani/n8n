@@ -122,7 +122,9 @@ function parseStartsAt_(dateText, timeText) {
 
   var y, monthIndex, day, m;
 
-  if ((m = d.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))) {
+  if ((m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) {
+    y = +m[1]; monthIndex = +m[2] - 1; day = +m[3];                     // 2026-09-23
+  } else if ((m = d.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))) {
     day = +m[1]; monthIndex = +m[2] - 1; y = +m[3];                     // 19/09/2026
   } else if ((m = d.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+),?\s+(\d{4})$/))) {
     day = +m[1]; monthIndex = monthIndex_(m[2]); y = +m[3];             // 19 September 2026
@@ -138,7 +140,7 @@ function parseStartsAt_(dateText, timeText) {
     hour = +m[1] % 12;
     minute = m[2] ? +m[2] : 0;
     if (m[3].toLowerCase() === 'p') hour += 12;
-  } else if ((m = t.match(/^(\d{1,2}):(\d{2})$/))) {                    // 19:00
+  } else if ((m = t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/))) {         // 19:00, 19:00:00
     hour = +m[1]; minute = +m[2];
   } else {
     return null;
