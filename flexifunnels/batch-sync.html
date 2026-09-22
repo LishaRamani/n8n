@@ -1,0 +1,241 @@
+<script>
+/* Webinar batch -> FlexiFunnels
+ *
+ * Paste this whole block into a Custom Code / HTML element on the page, then
+ * use these anywhere on the page. Styling is untouched - only the text inside
+ * the braces is swapped.
+ *
+ *   {{WEBINAR_DATE}}     ->  23 September 2026
+ *   {{WEBINAR_TIME}}     ->  7:00 pm
+ *   {{ZOOM_LINK}}        ->  the registration URL
+ *   {{COMMUNITY_LINK}}   ->  the WhatsApp community URL
+ *
+ * The two links also work as a button's destination: set the button URL to
+ * {{ZOOM_LINK}} or {{COMMUNITY_LINK}} and it is rewritten on load. Builders
+ * often percent-encode what you type there, so both spellings are handled.
+ *
+ * Countdown, replacing the builder's own timer:
+ *
+ *   <span data-wow-countdown></span>            ->  2d 05h 13m 22s
+ *   <span data-wow-countdown="days"></span>     ->  2
+ *   <span data-wow-countdown="hours"></span>    ->  05
+ *   <span data-wow-countdown="minutes"></span>  ->  13
+ *   <span data-wow-countdown="seconds"></span>  ->  22
+ *
+ * Once the webinar has started every countdown reads zero and the element
+ * gets data-wow-countdown-ended="true", so CSS can swap in "We are live".
+ *
+ * Scripts do not run in the FlexiFunnels editor. Check the live page.
+ */
+(function () {
+  'use strict';
+
+  // The Apps Script /exec URL for BatchConfig.gs. Paste it between the quotes.
+  var BATCH_CONFIG_URL = '';
+
+  // Painted while waiting, and left in place if the script never answers, so
+  // the page is never blank or showing raw braces. Keep these roughly current.
+  var FALLBACK = {
+    date: '23 September 2026',
+    time: '7:00 pm',
+    zoomUrl: 'https://womenonwealth.co.in/',
+    communityUrl: 'https://womenonwealth.co.in/',
+    startsAt: null
+  };
+
+  // Apps Script can take several seconds from cold. Rather than give up, the
+  // fallback is painted at this point and replaced whenever the real answer
+  // arrives, however late.
+  var SHOW_FALLBACK_AFTER_MS = 2500;
+
+  var FIELDS = {
+    WEBINAR_DATE: 'date',
+    WEBINAR_TIME: 'time',
+    ZOOM_LINK: 'zoomUrl',
+    COMMUNITY_LINK: 'communityUrl'
+  };
+
+  var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
+  var textSpots = [];
+  var linkSpots = [];
+  var countdownEls = [];
+  var shownReal = false;
+  var timer = null;
+
+  function tokenRe(name) {
+    return new RegExp('\\{\\{\\s*' + name + '\\s*\\}\\}', 'gi');
+  }
+
+  // Builders commonly store a typed URL percent-encoded, so {{ZOOM_LINK}}
+  // comes back as %7B%7BZOOM_LINK%7D%7D. Match either spelling.
+  function hrefTokenRe(name) {
+    return new RegExp('(?:\\{\\{\\s*' + name + '\\s*\\}\\}|%7B%7B\\s*' + name + '\\s*%7D%7D)', 'gi');
+  }
+
+  function collect() {
+    var walker = document.createTreeWalker(
+      document.body, NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function (n) {
+          if (!n.nodeValue || n.nodeValue.indexOf('{{') === -1) return NodeFilter.FILTER_REJECT;
+          if (n.parentNode && SKIP_TAGS[n.parentNode.nodeName]) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      },
+      false
+    );
+
+    var node;
+    while ((node = walker.nextNode())) {
+      var hit = false;
+      for (var name in FIELDS) {
+        if (tokenRe(name).test(node.nodeValue)) { hit = true; break; }
+      }
+      if (hit) textSpots.push({ node: node, template: node.nodeValue, el: node.parentElement });
+    }
+
+    var anchors = document.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length; i++) {
+      var href = anchors[i].getAttribute('href') || '';
+      if (href.indexOf('{{') === -1 && href.toUpperCase().indexOf('%7B%7B') === -1) continue;
+      linkSpots.push({ el: anchors[i], template: href });
+    }
+
+    var timers = document.querySelectorAll('[data-wow-countdown]');
+    for (var j = 0; j < timers.length; j++) countdownEls.push(timers[j]);
+
+    // Hide raw braces so a visitor never sees {{WEBINAR_DATE}} mid-load.
+    textSpots.forEach(function (spot) {
+      if (spot.el && spot.el.style) {
+        spot.el.setAttribute('data-wbs-prev-visibility', spot.el.style.visibility || '');
+        spot.el.style.visibility = 'hidden';
+      }
+    });
+  }
+
+  function fill(cfg, isReal) {
+    if (shownReal) return;
+    if (isReal) shownReal = true;
+
+    textSpots.forEach(function (spot) {
+      var out = spot.template;
+      for (var name in FIELDS) out = out.replace(tokenRe(name), String(cfg[FIELDS[name]] || ''));
+      try { spot.node.nodeValue = out; } catch (e) {}
+      if (spot.el && spot.el.style && spot.el.hasAttribute('data-wbs-prev-visibility')) {
+        spot.el.style.visibility = spot.el.getAttribute('data-wbs-prev-visibility') || '';
+        spot.el.removeAttribute('data-wbs-prev-visibility');
+      }
+    });
+
+    linkSpots.forEach(function (spot) {
+      var out = spot.template;
+      for (var name in FIELDS) out = out.replace(hrefTokenRe(name), String(cfg[FIELDS[name]] || ''));
+      try { spot.el.setAttribute('href', out); } catch (e) {}
+    });
+
+    startCountdown(cfg.startsAt);
+
+    try {
+      document.dispatchEvent(new CustomEvent('webinar-batch-sync', {
+        detail: { config: cfg, live: !!isReal }
+      }));
+    } catch (e) {}
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function renderCountdown(startsAt) {
+    if (!countdownEls.length) return;
+    var target = startsAt ? Date.parse(startsAt) : NaN;
+
+    // No usable start time: leave whatever the page already shows rather than
+    // print a wrong countdown.
+    if (isNaN(target)) return;
+
+    var left = Math.max(0, target - Date.now());
+    var secs = Math.floor(left / 1000);
+    var parts = {
+      days: Math.floor(secs / 86400),
+      hours: Math.floor((secs % 86400) / 3600),
+      minutes: Math.floor((secs % 3600) / 60),
+      seconds: secs % 60
+    };
+
+    countdownEls.forEach(function (el) {
+      var which = (el.getAttribute('data-wow-countdown') || '').toLowerCase();
+      var text;
+      if (which === 'days') text = String(parts.days);
+      else if (which === 'hours') text = pad(parts.hours);
+      else if (which === 'minutes') text = pad(parts.minutes);
+      else if (which === 'seconds') text = pad(parts.seconds);
+      else text = parts.days + 'd ' + pad(parts.hours) + 'h ' + pad(parts.minutes) + 'm ' + pad(parts.seconds) + 's';
+      el.textContent = text;
+      if (left === 0) el.setAttribute('data-wow-countdown-ended', 'true');
+    });
+
+    if (left === 0 && timer) { clearInterval(timer); timer = null; }
+  }
+
+  function startCountdown(startsAt) {
+    if (timer) { clearInterval(timer); timer = null; }
+    renderCountdown(startsAt);
+    if (countdownEls.length && startsAt && !isNaN(Date.parse(startsAt))) {
+      timer = setInterval(function () { renderCountdown(startsAt); }, 1000);
+    }
+  }
+
+  function warn(message) {
+    if (window.console && console.warn) console.warn('[webinar-batch-sync]', message);
+  }
+
+  // Loaded as a <script>, which no browser CORS rule applies to.
+  function load(done) {
+    var name = 'wbsCb' + Math.floor(Math.random() * 1e9);
+    var script = document.createElement('script');
+    var finished = false;
+
+    function finish(cfg, why) {
+      if (finished) return;
+      finished = true;
+      try { delete window[name]; } catch (e) { window[name] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (why) warn(why);
+      done(cfg);
+    }
+
+    window[name] = function (data) {
+      if (data && data.ok && data.zoomUrl) finish(data, null);
+      else finish(null, (data && data.error) || 'the script sent back no batch');
+    };
+    script.onerror = function () { finish(null, 'could not load ' + BATCH_CONFIG_URL); };
+
+    // Unique per page load, so a sheet edit shows on the next reload rather
+    // than being served from the browser's cache.
+    script.src = BATCH_CONFIG_URL +
+      (BATCH_CONFIG_URL.indexOf('?') === -1 ? '?' : '&') +
+      'callback=' + name +
+      '&_=' + Date.now() + '-' + Math.floor(Math.random() * 1e9);
+
+    (document.head || document.documentElement).appendChild(script);
+  }
+
+  function start() {
+    collect();
+    if (!textSpots.length && !linkSpots.length && !countdownEls.length) return;
+
+    if (!BATCH_CONFIG_URL) {
+      warn('BATCH_CONFIG_URL is empty - paste your Apps Script /exec URL into it');
+      return fill(FALLBACK, false);
+    }
+
+    setTimeout(function () { fill(FALLBACK, false); }, SHOW_FALLBACK_AFTER_MS);
+    load(function (cfg) { fill(cfg || FALLBACK, !!cfg); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
